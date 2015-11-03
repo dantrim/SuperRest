@@ -415,6 +415,60 @@ int main(int argc, char* argv[])
         *cutflow << SaveVar();
     }
 
+    *cutflow << NewVar("mt2"); {
+        *cutflow << HFTname("mt2");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double mt2 = -999.0;
+            if(leptons.size() == 2) {
+                mt2 = kin::getMT2(*sl->leptons, *sl->met);
+            }
+            return mt2;
+        };
+        *cutflow << SaveVar();
+    }
+    double meff;
+    *cutflow << NewVar("meff : scalar sum pt of all jets, leptons, and met"); {
+        *cutflow << HFTname("meff");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            meff = 0.0;
+            // met
+            meff += met.lv().Pt();
+            // jets
+            for(unsigned int ij = 0; ij < jets.size(); ij++){
+                meff += jets.at(ij)->Pt();
+            }
+            // leptons
+            for(unsigned int il=0; il < leptons.size(); il++){
+                meff += leptons.at(il)->Pt();
+            }
+            return meff;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("R1 : met / meff"); {
+        *cutflow << HFTname("R1");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double R1 = -999.0;
+            if(meff>0.0) {
+                R1 = met.lv().Pt() / meff * 1.0;
+            }
+            return R1;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("R2 : met / (met + l0pt + l1pt)"); {
+        *cutflow << HFTname("R2");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double R2 = -999.0;
+            if(leptons.size() == 2) {
+                double denom = met.lv().Pt() + leptons.at(0)->Pt() + leptons.at(1)->Pt();
+                R2 = met.lv().Pt() / denom * 1.0;
+            }
+            return R2;
+        };
+        *cutflow << SaveVar();
+    }
+
     //////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////
