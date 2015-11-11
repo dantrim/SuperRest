@@ -509,64 +509,69 @@ int main(int argc, char* argv[])
 
     *cutflow << [&](Superlink* sl, var_void*) {
     ///////////////////////////////////////////
+        if(bjets.size()==2) {
 
         // declare the frames
         LabRecoFrame lab("lab", "lab");
         DecayRecoFrame ss("ss", "ss");
         SelfAssemblingRecoFrame s1("s1", "s1");
         SelfAssemblingRecoFrame s2("s2", "s2");
-    //    DecayRecoFrame s1("s1", "s1");
-    //    DecayRecoFrame s2("s2", "s2");
-        VisibleRecoFrame v1("v1", "v1");
-        VisibleRecoFrame v2("v2", "v2");
+        VisibleRecoFrame b1("b1", "b1");
+        VisibleRecoFrame b2("b2", "b2");
+        DecayRecoFrame wx1("wx1", "wx1");
+        DecayRecoFrame wx2("wx2", "wx2");
+        VisibleRecoFrame l1("l1", "l1");
+        VisibleRecoFrame l2("l2", "l2");
         InvisibleRecoFrame i1("i1", "i1");
         InvisibleRecoFrame i2("i2", "i2");
-
+        
         // connect the frames
         lab.SetChildFrame(ss);
         ss.AddChildFrame(s1);
         ss.AddChildFrame(s2);
-        s1.AddChildFrame(v1);
-        s1.AddChildFrame(i1);
-        s2.AddChildFrame(v2);
-        s2.AddChildFrame(i2);
+        s1.AddChildFrame(b1);
+        s1.AddChildFrame(wx1);
+        s2.AddChildFrame(b2);
+        s2.AddChildFrame(wx2);
+        wx1.AddChildFrame(l1);
+        wx1.AddChildFrame(i1);
+        wx2.AddChildFrame(l2);
+        wx2.AddChildFrame(i2);
 
         // check that the decay tree is connected properly
         if(!lab.InitializeTree()) {
             cout << analysis_name << "    RestFrames::InitializeTree ERROR (" << __LINE__ << ")    Unable to initialize tree from lab frame. Exitting." << endl;
             exit(1);
         }
-
-        // define groups
-
-        InvisibleGroup inv("inv", "invsible group jigsaws");
+        InvisibleGroup inv("inv", "invisible group jigsaws");
         inv.AddFrame(i1);
         inv.AddFrame(i2);
 
-        CombinatoricGroup vis("vis", "visible object jigsaws");
-        vis.AddFrame(v1);
-        vis.SetNElementsForFrame(v1, 1, false);
-        vis.AddFrame(v2);
-        vis.SetNElementsForFrame(v2, 1, false);
+        CombinatoricGroup Bj("bjets", "b-jet jigsaws");
+        Bj.AddFrame(b1);
+        Bj.AddFrame(b2);
+        Bj.SetNElementsForFrame(b1,1,true);
+        Bj.SetNElementsForFrame(b2,1,true);
 
-        SetMassInvJigsaw MinMassJigsaw("MinMass", "Invisible system mass jigsaw");
+        SetMassInvJigsaw MinMassJigsaw("minmass", "invisible system mass jigsaw");
         inv.AddJigsaw(MinMassJigsaw);
 
-        SetRapidityInvJigsaw RapidityJigsaw("RapidityJigsaw", "invisible system rapidity jigsaw");
+        SetRapidityInvJigsaw RapidityJigsaw("rapidity", "invisible system rapidity jigsaw");
         inv.AddJigsaw(RapidityJigsaw);
-        RapidityJigsaw.AddVisibleFrames(lab.GetListVisibleFrames());
+        RapidityJigsaw.AddVisibleFrames((lab.GetListVisibleFrames()));
 
-        ContraBoostInvJigsaw ContraBoostJigsaw("ContraBoostJigsaw", "ContraBoost Invariant Jigsaw");
+        ContraBoostInvJigsaw ContraBoostJigsaw("contra", "contraboost invariant jigsaw");
         inv.AddJigsaw(ContraBoostJigsaw);
         ContraBoostJigsaw.AddVisibleFrames((s1.GetListVisibleFrames()), 0);
         ContraBoostJigsaw.AddVisibleFrames((s2.GetListVisibleFrames()), 1);
         ContraBoostJigsaw.AddInvisibleFrame(i1, 0);
         ContraBoostJigsaw.AddInvisibleFrame(i2, 1);
 
-        MinMassesCombJigsaw HemiJigsaw("hemi_jigsaw", "Minimize m_{v_{1,2}} jigsaw");
-        vis.AddJigsaw(HemiJigsaw);
-        HemiJigsaw.AddFrame(v1, 0);
-        HemiJigsaw.AddFrame(v2, 1);
+
+        MinMassesCombJigsaw HemiJigsaw("hemijigsaw", "Minimize m(b #it{l}) jigsaw");
+        Bj.AddJigsaw(HemiJigsaw);
+        HemiJigsaw.AddFrames((s1.GetListVisibleFrames()), 0);
+        HemiJigsaw.AddFrames((s2.GetListVisibleFrames()), 1);
 
         // check that the jigsaws are in place
         if(!lab.InitializeAnalysis()) {
@@ -576,6 +581,22 @@ int main(int argc, char* argv[])
 
         // clear the event for sho
         lab.ClearEvent();
+
+        // set the met
+        TVector3 met3vector(sl->met->lv().Px(), sl->met->lv().Py(), sl->met->lv().Pz());
+        inv.SetLabFrameThreeVector(met3vector);
+        Bj.AddLabFrameFourVector(*bjets.at(0));
+        Bj.AddLabFrameFourVector(*bjets.at(1));
+        l1.SetLabFrameFourVector(*leptons.at(0));
+        l2.SetLabFrameFourVector(*leptons.at(1));
+
+        // analyze event
+        lab.AnalyzeEvent();
+
+        
+        
+
+/*
 
         // set the met
         TVector3 met3vector(sl->met->lv().Px(), sl->met->lv().Py(), sl->met->lv().Pz());
@@ -659,9 +680,10 @@ int main(int argc, char* argv[])
         // BOOST ANGLES
         DPB_vSS = ss.GetDeltaPhiBoostVisible();
 
-
+*/
 
     ///////////////////////////////////////////
+    } // bjets size == 2
     }; //end void
 
     *cutflow << NewVar("HT : H_11_SS"); {

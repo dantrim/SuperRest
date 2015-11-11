@@ -13,7 +13,7 @@ PACKAGE              = SuperRest
 PACKAGE_PRELOAD      = Tree 
 
 # additional compilation flags to pass (not propagated to dependent packages):
-PACKAGE_CXXFLAGS     = -Wno-sign-compare -Wno-parentheses -O3 -ffast-math -I/data/uclhc/uci/user/dantrim/n0216val/RestFrames/include 
+PACKAGE_CXXFLAGS     = -Wno-sign-compare -Wno-parentheses -O3 -ffast-math -I$(ROOTCOREDIR)/../RestFrames/include 
 
 # additional compilation flags to pass (propagated to dependent packages):
 PACKAGE_OBJFLAGS     = 
@@ -25,7 +25,7 @@ PACKAGE_LDFLAGS      =
 PACKAGE_BINFLAGS     = -lXMLParser -lEG 
 
 # additional linker flags to pass (propagated to client libraries):
-PACKAGE_LIBFLAGS     = -lm -L/data/uclhc/uci/user/dantrim/n0216val/RestFrames/lib -lRestFrames 
+PACKAGE_LIBFLAGS     = -lm -L$(ROOTCOREDIR)/../RestFrames/lib -lRestFrames 
 
 # the list of packages we depend on:
 PACKAGE_DEP          = Superflow SusyNtuple 
