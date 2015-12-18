@@ -127,6 +127,11 @@ int main(int argc, char* argv[])
         return sl->leptons->size() == 2;
     };
 
+    *cutflow << CutName("opposite sign") << [](Superlink* sl) -> bool {
+        return ((sl->leptons->at(0)->q * sl->leptons->at(1)->q) < 0);
+    };
+    
+
     ///////////////////////////////////////////////////
     // Ntuple Setup
     ///////////////////////////////////////////////////
@@ -834,6 +839,19 @@ int main(int argc, char* argv[])
                 cosThetaB = tanh((lp.Eta()-lm.Eta())/2.);
             }
             return cosThetaB;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("deltaX (WW-like)"); {
+        *cutflow << HFTname("deltaX");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double deltaX = -999.0;
+            if(leptons.size()==2) {
+                double sqrtS = 13000.0;
+                double num = leptons.at(0)->Pz() + leptons.at(1)->Pz();
+                deltaX = num / sqrtS * 1.0;
+            }
+            return deltaX;
         };
         *cutflow << SaveVar();
     }
@@ -1650,6 +1668,379 @@ int main(int argc, char* argv[])
         *cutflow << SaveVar();
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    //
+    // RESTFRAMES -- COMPRESSED
+    // RESTFRAMES -- COMPRESSED
+    // RESTFRAMES -- COMPRESSED
+    //
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+
+    int cN_ISR;
+    int cN_V;
+    int cNj_ISR;
+    int cNj_V;
+    int cNb_ISR;
+    int cNb_V;
+    double cpT_ISR;
+    double cpT_I;
+    double cpT_S;
+    double cR_ISR;
+    double cR_ISR_S;
+    double cCosS;
+    double cCosS_I;
+    double cMS;
+    double cMV;
+    double cMISR;
+
+
+
+    *cutflow << [&](Superlink* sl, var_void*) {
+    ///////////////////////////////////////////
+        if(sjets.size()>=2 && bjets.size()>=1) {
+
+            // setup the analysis tree
+            LabRecoFrame        cLAB("cLAB", "cLAB");
+            DecayRecoFrame      cCM("cCM", "cCM");
+            DecayRecoFrame      cS("cS", "cS");
+            VisibleRecoFrame    cISR("cISR", "cISR");
+            VisibleRecoFrame    cV("cV", "cV");
+            DecayRecoFrame      cINVLL("cINVLL", "cINVLL");
+            DecayRecoFrame      cLL("cLL", "cLL");
+            InvisibleRecoFrame  cI("cI", "cI");
+            VisibleRecoFrame    cLEP1("cLEP1", "cLEP1");
+            VisibleRecoFrame    cLEP2("cLEP2", "cLEP2");
+
+            // connect the tree according to our interpretation
+            cLAB.SetChildFrame(cCM);
+            cCM.AddChildFrame(cISR);
+            cCM.AddChildFrame(cS);
+            cS.AddChildFrame(cV);
+            cS.AddChildFrame(cINVLL);
+            cINVLL.AddChildFrame(cLL);
+            cINVLL.AddChildFrame(cI);
+            cLL.AddChildFrame(cLEP1);
+            cLL.AddChildFrame(cLEP2);
+
+            // check that the decay tree is connected properly
+            if(!cLAB.InitializeTree()) {
+                cout << analysis_name << "    RestFrames::InitializeTree ERROR (" << __LINE__ << ")    Unable to initialize tree from lab frame. Exiting." << endl;
+                exit(1);
+            }
+
+            // define groups
+            InvisibleGroup cINV("cINV", "c-Invisible system");
+            cINV.AddFrame(cI);
+
+            // combinatoric for all of our jets (sjets & bjets)
+            // put loosest restrictions on NElements (can always cut on these)
+            CombinatoricGroup cVIS("cVIS", "c-Visible jets");
+            cVIS.AddFrame(cISR);
+            cVIS.SetNElementsForFrame(cISR,1,false);
+            cVIS.AddFrame(cV);
+            cVIS.SetNElementsForFrame(cV,0,false);
+
+            // set the invisible system mass to zero
+            SetMassInvJigsaw cInvMass("cInvMass", "c-Invisible system mass to zero jigsaw");
+            cINV.AddJigsaw(cInvMass);
+           
+            // define the rule to partition objects between "ISR" and "V"
+            MinMassesCombJigsaw cSplitVis("cSplitVis", "Minimize M_{ISR} and M_{V} Jigsaw"); 
+            cVIS.AddJigsaw(cSplitVis);
+            // "0" group (ISR)
+            cSplitVis.AddFrame(cISR, 0);
+            // "1" group (V + I + LL)
+            cSplitVis.AddFrame(cV,1);
+            cSplitVis.AddFrame(cI,1);
+            cSplitVis.AddFrame(cLL,1);
+
+            // check that the jigsaws are in place
+            if(!cLAB.InitializeAnalysis()) {
+                cout << analysis_name << "    RestFrames::InitializeAnalysis ERROR (" << __LINE__ << ")    Unable to initialize analysis from lab frame. Exiting." << endl;
+                exit(1);
+            }
+
+            // clear the event for sho
+            cLAB.ClearEvent();
+
+            // set the met
+            TVector3 cMET(sl->met->lv().Px(), sl->met->lv().Py(), sl->met->lv().Pz());
+
+            // vector of sjets
+            vector<TLorentzVector> sJETS;
+            for(int ij = 0; ij < (int)sjets.size(); ij++) {
+                TLorentzVector j;
+                j.SetPtEtaPhiM(sjets.at(ij)->Pt(), sjets.at(ij)->Eta(), sjets.at(ij)->Phi(), sjets.at(ij)->M());
+                sJETS.push_back(j);
+            }
+            // vector of bjets
+            vector<TLorentzVector> bJETS;
+            for(int ib = 0; ib < (int)bjets.size(); ib++) {
+                TLorentzVector b;
+                b.SetPtEtaPhiM(bjets.at(ib)->Pt(), bjets.at(ib)->Eta(), bjets.at(ib)->Phi(), bjets.at(ib)->M());
+                bJETS.push_back(b);
+            }
+
+            // add the jets (in transverse view) to the combinatoric group and index each type
+            vector<RFKey> sjetID;
+            vector<RFKey> bjetID;
+            for(int ij = 0; ij < (int)sJETS.size(); ij++) {
+                TLorentzVector jet_ = sJETS[ij];
+                jet_.SetPtEtaPhiM(jet_.Pt(), 0.0, jet_.Phi(), jet_.M());
+                sjetID.push_back(cVIS.AddLabFrameFourVector(jet_));
+            }
+            for(int ib = 0; ib < (int)bJETS.size(); ib++) {
+                TLorentzVector jet_ = bJETS[ib];
+                jet_.SetPtEtaPhiM(jet_.Pt(), 0.0, jet_.Phi(), jet_.M());
+                bjetID.push_back(cVIS.AddLabFrameFourVector(jet_));
+            }
+
+            // add the met vector to the invisible system
+            cINV.SetLabFrameThreeVector(cMET);
+
+            // add the leptons (in transverse view) to their frames
+            TLorentzVector lep1, lep2;
+            lep1.SetPtEtaPhiM(leptons.at(0)->Pt(), 0.0, leptons.at(0)->Phi(), leptons.at(0)->M());
+            lep2.SetPtEtaPhiM(leptons.at(1)->Pt(), 0.0, leptons.at(1)->Phi(), leptons.at(1)->M());
+            cLEP1.SetLabFrameFourVector(lep1);
+            cLEP2.SetLabFrameFourVector(lep2);
+            
+
+            // analyze the event
+            if(!cLAB.AnalyzeEvent()) {
+                cout << analysis_name << "    RestFrames::AnalyzeEvent ERROR (" << __LINE__ << ")    Unable to analyze event from lab frame. Exiting." << endl;
+                exit(1);
+            }
+
+            cN_ISR = cVIS.GetNElementsInFrame(cISR);
+            cN_V   = cVIS.GetNElementsInFrame(cV);
+            cNj_ISR = 0;
+            cNj_V = 0;
+            cNb_ISR = 0;
+            cNb_V = 0;
+
+
+            int nS = sjetID.size();
+            for(int i = 0; i < nS; i++) {
+                if(cVIS.GetFrame(sjetID[i]) == cISR) {
+                    cNj_ISR++;
+                }
+                else if(cVIS.GetFrame(sjetID[i]) == cV) {
+                    cNj_V++;
+                }
+            }
+            int nB = bjetID.size();
+            for(int i = 0; i < nB; i++) {
+                if(cVIS.GetFrame(bjetID[i]) == cISR) {
+                    cNb_ISR++;
+                }
+                else if(cVIS.GetFrame(bjetID[i]) == cV) {
+                    cNb_V++;
+                }
+            }
+
+            TVector3 vP_ISR = cISR.GetFourVector(cCM).Vect();
+            TVector3 vP_S = cS.GetFourVector(cCM).Vect();
+            TVector3 vP_I   = cI.GetFourVector(cCM).Vect();
+
+            cpT_ISR = vP_ISR.Mag();
+            cpT_S = vP_S.Mag();
+            cpT_I = vP_I.Mag();
+            cR_ISR = fabs(vP_I.Dot(vP_ISR.Unit())) / cpT_ISR;
+            cR_ISR_S = fabs(vP_I.Dot(vP_S.Unit())) / cpT_S;
+
+            cCosS = cS.GetCosDecayAngle(); // decay angle relative to cINVLL decay
+            cCosS_I = cS.GetCosDecayAngle(cI); // decay angle relative to the invisible system (a la two-body decay to cINV and cLL)
+
+            cMS = cS.GetMass();
+            cMV = cV.GetMass();
+            cMISR = cISR.GetMass();
+        } // sjets >= 2 && bjest >= 1
+
+    }; // RESTFRAMES -- COMPRESSED [END]
+
+    *cutflow << NewVar("cN_ISR -- number of visible objects in the cISR frame"); {
+        *cutflow << HFTname("cN_ISR");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            int out = -1;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cN_ISR;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cN_V -- number of visible objects in the cV frame"); {
+        *cutflow << HFTname("cN_V");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            int out = -1;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cN_V;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cNj_ISR -- number of sjets in the cISR frame"); {
+        *cutflow << HFTname("cNj_ISR");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            int out = -1;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cNj_ISR;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cNj_V -- number of sjets in the cV frame"); {
+        *cutflow << HFTname("cNj_V");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            int out = -1;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cNj_V;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cNb_ISR -- number of bjets in the cISR frame"); {
+        *cutflow << HFTname("cNb_ISR");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            int out = -1;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cNb_ISR;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cNb_V -- number of bjets in the cV frame"); {
+        *cutflow << HFTname("cNb_V");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            int out = -1;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cNb_V;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cpT_ISR -- pT of cISR frame in the cCM restframe"); {
+        *cutflow << HFTname("cpT_ISR");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cpT_ISR;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cpT_I -- pT of cI frame in the cCM restframe"); {
+        *cutflow << HFTname("cpT_I");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cpT_I;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cpT_S -- pT of cS frame in the cCM restframe"); {
+        *cutflow << HFTname("cpT_S");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cpT_S;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cR_ISR -- ratio of inv. system momentum to ISR momentum"); {
+        *cutflow << HFTname("cR_ISR");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cR_ISR;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cR_ISR_S -- ratio of inv. system momtnum to S momentum"); {
+        *cutflow << HFTname("cR_ISR_S");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cR_ISR_S;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cCosS -- cosine of decay of cS relative to the cINVLL decay frame"); {
+        *cutflow << HFTname("cCosS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cCosS;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cCosS_I -- cosine of decay of cS relative to the cI frame"); {
+        *cutflow << HFTname("cCosS_I");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cCosS_I;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cMS -- mass of the sparticle decay system cS"); {
+        *cutflow << HFTname("cMS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cMS;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cMV -- mass of the cV system"); {
+        *cutflow << HFTname("cMV");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cMV;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cMISR -- mass of the cISR system"); {
+        *cutflow << HFTname("cMISR");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cMISR;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
 
 
 
