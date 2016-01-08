@@ -75,8 +75,7 @@ def main() :
             #run_cmd += ' %s '%(tar_location + "area.tgz")
             run_cmd += ' n0216val '
             run_cmd += ' %s '%dataset
-            run_cmd += ' '
-            #run_cmd += ' -c '
+            run_cmd += ' ' # any extra cmd line optino for Superflow executable
             run_cmd += '"'
             run_cmd += ' condor_submit submitFile_TEMPLATE.condor '
             lname = dataset.split("/")[-1].replace(".txt", "")
@@ -157,6 +156,8 @@ def look_for_condor_executable() :
     f.write('source susynt-read/bash/setup_root.sh\n')
     f.write('echo "Calling : source RootCore/local_setup.sh"\n')
     f.write('source RootCore/local_setup.sh\n')
+    f.write('echo "Calling : cd SuperRest/"\n')
+    f.write('cd SuperRest/\n')
     f.write('source setRestFrames.sh\n')
     f.write('echo "Calling : cd ${work_dir}"\n')
     f.write('cd ${work_dir}\n')
