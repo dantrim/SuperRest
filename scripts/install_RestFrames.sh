@@ -8,8 +8,8 @@ cd ..
 startDir=${PWD}
 echo "Starting from ${startDir}"
 # checkout the master branch
-#echo " > Checking out RestFrames from GitHub"
-#git clone -b master git@github.com:crogan/RestFrames.git
+echo " > Checking out RestFrames from GitHub"
+git clone -b master git@github.com:crogan/RestFrames.git
 
 echo "cd RestFrames"
 cd RestFrames

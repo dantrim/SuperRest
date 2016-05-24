@@ -1446,37 +1446,6 @@ int main(int argc, char* argv[])
     //// Weight variation systematics
     //
 
-    *cutflow << NewSystematic("shift in data mu by +/- 10 %"); {
-        *cutflow << WeightSystematic(SupersysWeight::PILEUP_UP, SupersysWeight::PILEUP_DOWN);
-        *cutflow << TreeName("PILEUP");
-        *cutflow << SaveSystematic();
-    }
-
-    *cutflow << NewSystematic("shift in electron ID -SF"); {
-        *cutflow << WeightSystematic(SupersysWeight::EL_EFF_ID_UP, SupersysWeight::EL_EFF_ID_DOWN);
-        *cutflow << TreeName("ELEFFID");
-        *cutflow << SaveSystematic();
-    }
-
-    *cutflow << NewSystematic("shift in electron reco - SF"); {
-        *cutflow << WeightSystematic(SupersysWeight::EL_EFF_RECO_UP, SupersysWeight::EL_EFF_RECO_DOWN);
-        *cutflow << TreeName("ELEFFRECO");
-        *cutflow << SaveSystematic();
-    }
-
-    *cutflow << NewSystematic("shift in muon eff - stat"); {
-        *cutflow << WeightSystematic(SupersysWeight::MUON_EFF_STAT_UP, SupersysWeight::MUON_EFF_STAT_DOWN);
-        *cutflow << TreeName("MUEFFSTAT");
-        *cutflow << SaveSystematic();
-    }
-
-    *cutflow << NewSystematic("shift in muon eff - syst"); {
-        *cutflow << WeightSystematic(SupersysWeight::MUON_EFF_SYST_UP, SupersysWeight::MUON_EFF_SYST_DOWN);
-        *cutflow << TreeName("MUEFFSYST");
-        *cutflow << SaveSystematic();
-    }
-
-
 /*
     //
     // Weight variation systematics
