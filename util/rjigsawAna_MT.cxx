@@ -70,6 +70,9 @@ int main(int argc, char* argv[])
     cutflow->setCountWeights(true);
     cutflow->setChain(chain);
 
+    // initialize trigger
+    cutflow->nttools().initTriggerTool(ChainHelper::firstFile(sample_, m_dbg));
+
     // print some useful
     cout << analysis_name << "    Total Entries    : " << chain->GetEntries() << endl;
     if(num_events_ > 0) {
@@ -150,6 +153,70 @@ int main(int argc, char* argv[])
     ///////////////////////////////////////////////////
     // Ntuple Setup
     ///////////////////////////////////////////////////
+
+
+    // TRIGGERS
+    bool pass_mu18_mu8noL1;
+    bool pass_mu20_mu8noL1;
+    bool pass_e17_lhloose_mu14;
+    bool pass_2e12_lhloose_L12EM10VH;
+    bool pass_2e15_lhloose_L12EM13VH;
+    *cutflow << [&](Superlink* sl, var_void*) {
+        pass_mu18_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu18_mu8noL1");
+        pass_mu20_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu20_mu8noL1");
+        pass_e17_lhloose_mu14 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e17_lhloose_mu14");
+        pass_2e12_lhloose_L12EM10VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e12_lhloose_L12EM10VH");
+        pass_2e15_lhloose_L12EM13VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e15_lhloose_L12EM13VH");
+    };
+    *cutflow << NewVar("pass mu18_mu8noL1"); {
+        *cutflow << HFTname("trig_mu18_mu8noL1");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return pass_mu18_mu8noL1;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("pass mu20_mu8noL1"); {
+        *cutflow << HFTname("trig_mu20_mu8noL1");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return pass_mu20_mu8noL1;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("pass e17_lhloose_mu14"); {
+        *cutflow << HFTname("trig_e17_lhloose_mu14");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return pass_e17_lhloose_mu14;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("pass 2e12_lhloose_L12EM10VH"); {
+        *cutflow << HFTname("trig_2e12_lhloose_L12EM10VH");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return pass_2e12_lhloose_L12EM10VH;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("pass 2e15_lhloose_L12EM13VH"); {
+        *cutflow << HFTname("trig_2e15_lhloose_L12EM13VH");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return pass_2e15_lhloose_L12EM13VH;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("pass OR 2015 trigger set"); {
+        *cutflow << HFTname("trig_pass2015");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return (pass_mu18_mu8noL1 || pass_e17_lhloose_mu14 || pass_2e12_lhloose_L12EM10VH);
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("pass OR 2016 trigger set"); {
+        *cutflow << HFTname("trig_pass2016");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return (pass_mu20_mu8noL1 || pass_e17_lhloose_mu14 || pass_2e15_lhloose_L12EM13VH);
+        };
+        *cutflow << SaveVar();
+    }
 
     // standard variables
     *cutflow << NewVar("event weight"); {
@@ -655,6 +722,17 @@ int main(int argc, char* argv[])
         *cutflow << [&](Superlink* sl, var_float*) -> double { return met.lv().Phi(); };
         *cutflow << SaveVar();
     }
+    *cutflow << NewVar("met TST"); {
+        *cutflow << HFTname("metTST");
+        *cutflow << [&](Superlink* sl, var_float*) -> double { return met.softTerm_et; };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("delta phi TST and MET"); {
+        *cutflow << HFTname("dphi_met_tst");
+        *cutflow << [&](Superlink* sl, var_float*) -> double { return fabs(TVector2::Phi_mpi_pi(met.softTerm_phi - met.lv().Phi())); };
+        *cutflow << SaveVar();
+    }
+
     *cutflow << NewVar("delta phi between dilepton system and met"); {
         *cutflow << HFTname("dphi_met_ll");
         *cutflow << [&](Superlink* sl, var_float*) -> double {
@@ -4079,6 +4157,8 @@ void read_options(int argc, char* argv[], TChain* chain, int& n_skip_, int& num_
             exit(1);
         }
     } // i
+
+    sample_ = input;
 
     cout << analysis_name << "    input: " << input << endl;
     cout << analysis_name << "    input: " << input << endl;
