@@ -123,48 +123,27 @@ int main(int argc, char* argv[])
         return (sl->tools->passJetCleaning(sl->baseJets));
     };
 
-//    *cutflow << CutName("pass met cleaning") << [&](Superlink* sl) -> bool {
-//        return (sl->tools->passMetCleaning(sl->met));
-//    };
-
     ///////////////////////////////////////////////////
     // Analysis Cuts
     ///////////////////////////////////////////////////
-    *cutflow << CutName("exactly two signal leptons") << [](Superlink* sl) -> bool {
-        return sl->leptons->size() == 2;
+    *cutflow << CutName("exactly two baseline leptons") << [](Superlink* sl) -> bool {
+        return sl->baseLeptons->size() == 2;
     };
 
-    *cutflow << CutName("lepton pTs > 20 GeV") << [](Superlink* sl) -> bool {
-        return ( (sl->leptons->at(0)->Pt()>20) && (sl->leptons->at(1)->Pt()>20) );
-    };
+//    *cutflow << CutName("lepton pTs > 20 GeV") << [](Superlink* sl) -> bool {
+//        return ( (sl->baseLeptons->at(0)->Pt()>20) && (sl->baseLeptons->at(1)->Pt()>20) );
+//    };
 
     *cutflow << CutName("opposite sign") << [](Superlink* sl) -> bool {
-        return ((sl->leptons->at(0)->q * sl->leptons->at(1)->q) < 0);
+        return ((sl->baseLeptons->at(0)->q * sl->baseLeptons->at(1)->q) < 0);
     };
-//    *cutflow << CutName("isSF") << [&](Superlink* sl) -> bool {
-//        bool isSF = false;
-//        bool zveto = false;
-//        if((sl->leptons->size()==2 && (sl->electrons->size()==2 || sl->muons->size()==2))) isSF = true;
-//        if(isSF) {
-//            double mll = (*sl->leptons->at(0) + *sl->leptons->at(1)).M();
-//            if(fabs(mll-91.2)>10.) zveto = true;
-//        }
-//        if(isSF && zveto) return true;
-//        else { return false; }
-//    };
-//    *cutflow << CutName("isDF") << [&](Superlink* sl) -> bool {
-//        bool isDF = false;
-//        if((sl->leptons->size()==2 && sl->electrons->size()==1 && sl->muons->size()==1)) isDF = true;
-//        if(isDF) return true;
-//        else { return false; }
-//    };
 
     *cutflow << CutName("veto SF Z-window (within 10 GeV)") << [](Superlink* sl) -> bool {
         bool pass = true;
         bool isSF = false;
-        if((sl->leptons->size()==2 && (sl->electrons->size()==2 || sl->muons->size()==2))) isSF = true;
+        if((sl->baseLeptons->size()==2 && (sl->baseElectrons->size()==2 || sl->baseMuons->size()==2))) isSF = true;
         if(isSF) {
-            double mll = (*sl->leptons->at(0) + *sl->leptons->at(1)).M();
+            double mll = (*sl->baseLeptons->at(0) + *sl->baseLeptons->at(1)).M();
             if( fabs(mll-91.2) < 10. ) pass = false;
         }
         return pass;
@@ -235,14 +214,6 @@ int main(int argc, char* argv[])
         *cutflow << HFTname("trig_pass2016");
         *cutflow << [&](Superlink* sl, var_bool*) -> bool {
             return (pass_mu20_mu8noL1 || pass_e17_lhloose_mu14 || pass_2e15_lhloose_L12EM13VH);
-        };
-        *cutflow << SaveVar();
-    }
-
-    *cutflow << NewVar("mcid"); {
-        *cutflow << HFTname("mcid");
-        *cutflow << [&](Superlink* sl, var_int*) -> int {
-            return sl->nt->evt()->mcChannel;
         };
         *cutflow << SaveVar();
     }
@@ -336,9 +307,9 @@ int main(int argc, char* argv[])
     LeptonVector leptons;
     ElectronVector electrons;
     MuonVector muons;
-    *cutflow << [&](Superlink* sl, var_void*) { leptons = *sl->leptons; };
-    *cutflow << [&](Superlink* sl, var_void*) { electrons = *sl->electrons; };
-    *cutflow << [&](Superlink* sl, var_void*) { muons = *sl->muons; };
+    *cutflow << [&](Superlink* sl, var_void*) { leptons = *sl->baseLeptons; };
+    *cutflow << [&](Superlink* sl, var_void*) { electrons = *sl->baseElectrons; };
+    *cutflow << [&](Superlink* sl, var_void*) { muons = *sl->baseMuons; };
 
     *cutflow << NewVar("number of leptons"); {
         *cutflow << HFTname("nLeptons");
@@ -364,6 +335,42 @@ int main(int argc, char* argv[])
             }
             return out;
             };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("lepton passes signal selection"); {
+        *cutflow << HFTname("l_passSignal");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            for(int i = 0; i < leptons.size(); i++) {
+                if(leptons.at(i)->isEle()) {
+                    const Susy::Electron* ele = dynamic_cast<Susy::Electron*>(leptons.at(i));
+                    bool isSig = sl->tools->electronSelector().isSignal(ele);
+                    if(isSig) out.push_back(1);
+                    else { out.push_back(0); }
+                }
+                else if(!(leptons.at(i)->isEle())) {
+                    const Susy::Muon* mu = dynamic_cast<Susy::Muon*>(leptons.at(i));
+                    bool isSig = sl->tools->muonSelector().isSignal(mu);
+                    if(isSig) out.push_back(1);
+                    else { out.push_back(0); }
+                }
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("lepton flavor"); {
+        *cutflow << HFTname("l_flav");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            for(int i = 0; i < leptons.size(); i++) {
+                if(leptons.at(i)->isEle()) {
+                    out.push_back(11 * leptons.at(i)->q);
+                }
+                else { out.push_back(13 * leptons.at(i)->q); }
+            }
+            return out;
+        };
         *cutflow << SaveVar();
     }
     *cutflow << NewVar("lepton pt"); {
@@ -493,19 +500,19 @@ int main(int argc, char* argv[])
         };
         *cutflow << SaveVar();
     }
- //   *cutflow << NewVar("delta phi between to leptons"); {
- //       *cutflow << HFTname("dphi_ll");
- //       *cutflow << [&](Superlink* sl, var_float*) -> double {
- //           double dphi = -999.0;
- //           if(leptons.size() == 2) {
- //               Lepton l0 = *leptons.at(0);
- //               Lepton l1 = *leptons.at(1);
- //               dphi = l0.DeltaPhi(l1);
- //           }
- //           return dphi;
- //       };
- //       *cutflow << SaveVar();
- //   }
+    *cutflow << NewVar("delta phi between to leptons"); {
+        *cutflow << HFTname("dphi_ll");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double dphi = -999.0;
+            if(leptons.size() == 2) {
+                Lepton l0 = *leptons.at(0);
+                Lepton l1 = *leptons.at(1);
+                dphi = l0.DeltaPhi(l1);
+            }
+            return dphi;
+        };
+        *cutflow << SaveVar();
+    }
     *cutflow << NewVar("delta eta between two leptons"); {
         *cutflow << HFTname("deta_ll");
         *cutflow << [&](Superlink* sl, var_float*) -> double {
@@ -656,86 +663,86 @@ int main(int argc, char* argv[])
             };
         *cutflow << SaveVar();
     }
-//    *cutflow << NewVar("delta phi between dilepton system and leading jet"); {
-//        *cutflow << HFTname("dphi_j0_ll");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -999;
-//            if(jets.size()>0) {
-//                TLorentzVector l0, l1, ll;
-//                l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
-//                l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
-//                ll = l0 + l1;
-//                out = jets.at(0)->DeltaPhi(ll);
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("delta phi between leading lepton and leading sjet"); {
-//        *cutflow << HFTname("dphi_j0_l0");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -999;
-//            if(jets.size()>0) {
-//                out = jets.at(0)->DeltaPhi(*leptons.at(0));
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//
-//    *cutflow << NewVar("delta phi between dilepton system and leading sjet"); {
-//        *cutflow << HFTname("dphi_sj0_ll");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -999;
-//            if(sjets.size()>0) {
-//                TLorentzVector l0, l1, ll;
-//                l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
-//                l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
-//                ll = l0 + l1;
-//                out = sjets.at(0)->DeltaPhi(ll);
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("delta phi between leading lepton and leading sjet"); {
-//        *cutflow << HFTname("dphi_sj0_l0");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -999;
-//            if(sjets.size()>0) {
-//                out = sjets.at(0)->DeltaPhi(*leptons.at(0));
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//
-//    *cutflow << NewVar("delta phi between dilepton system and leading bjet"); {
-//        *cutflow << HFTname("dphi_bj0_ll");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -999;
-//            if(bjets.size()>0) {
-//                TLorentzVector l0, l1, ll;
-//                l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
-//                l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
-//                ll = l0 + l1;
-//                out = bjets.at(0)->DeltaPhi(ll);
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("delta phi between leading lepton and leading bjet"); {
-//        *cutflow << HFTname("dphi_bj0_l0");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -999;
-//            if(bjets.size()>0) {
-//                out = bjets.at(0)->DeltaPhi(*leptons.at(0));
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
+    *cutflow << NewVar("delta phi between dilepton system and leading jet"); {
+        *cutflow << HFTname("dphi_j0_ll");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999;
+            if(jets.size()>0) {
+                TLorentzVector l0, l1, ll;
+                l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
+                l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
+                ll = l0 + l1;
+                out = jets.at(0)->DeltaPhi(ll);
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("delta phi between leading lepton and leading sjet"); {
+        *cutflow << HFTname("dphi_j0_l0");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999;
+            if(jets.size()>0) {
+                out = jets.at(0)->DeltaPhi(*leptons.at(0));
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("delta phi between dilepton system and leading sjet"); {
+        *cutflow << HFTname("dphi_sj0_ll");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999;
+            if(sjets.size()>0) {
+                TLorentzVector l0, l1, ll;
+                l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
+                l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
+                ll = l0 + l1;
+                out = sjets.at(0)->DeltaPhi(ll);
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("delta phi between leading lepton and leading sjet"); {
+        *cutflow << HFTname("dphi_sj0_l0");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999;
+            if(sjets.size()>0) {
+                out = sjets.at(0)->DeltaPhi(*leptons.at(0));
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("delta phi between dilepton system and leading bjet"); {
+        *cutflow << HFTname("dphi_bj0_ll");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999;
+            if(bjets.size()>0) {
+                TLorentzVector l0, l1, ll;
+                l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
+                l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
+                ll = l0 + l1;
+                out = bjets.at(0)->DeltaPhi(ll);
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("delta phi between leading lepton and leading bjet"); {
+        *cutflow << HFTname("dphi_bj0_l0");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999;
+            if(bjets.size()>0) {
+                out = bjets.at(0)->DeltaPhi(*leptons.at(0));
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
     // met variables
     // met variables
     // met variables
@@ -756,32 +763,32 @@ int main(int argc, char* argv[])
         *cutflow << [&](Superlink* sl, var_float*) -> double { return met.softTerm_et; };
         *cutflow << SaveVar();
     }
-//    *cutflow << NewVar("delta phi TST and MET"); {
-//        *cutflow << HFTname("dphi_met_tst");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double { return fabs(TVector2::Phi_mpi_pi(met.softTerm_phi - met.lv().Phi())); };
-//        *cutflow << SaveVar();
-//    }
+    *cutflow << NewVar("delta phi TST and MET"); {
+        *cutflow << HFTname("dphi_met_tst");
+        *cutflow << [&](Superlink* sl, var_float*) -> double { return fabs(TVector2::Phi_mpi_pi(met.softTerm_phi - met.lv().Phi())); };
+        *cutflow << SaveVar();
+    }
 
-//    *cutflow << NewVar("delta phi between dilepton system and met"); {
-//        *cutflow << HFTname("dphi_met_ll");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            TLorentzVector l0, l1, ll;
-//            l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
-//            l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
-//            ll = l0 + l1;
-//            return met.lv().DeltaPhi(ll);
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("delta phi between lead lepton and met"); {
-//        *cutflow << HFTname("dphi_met_l0");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            TLorentzVector l0;
-//            l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
-//            return met.lv().DeltaPhi(l0);
-//        };
-//        *cutflow << SaveVar();
-//    }
+    *cutflow << NewVar("delta phi between dilepton system and met"); {
+        *cutflow << HFTname("dphi_met_ll");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            TLorentzVector l0, l1, ll;
+            l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
+            l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
+            ll = l0 + l1;
+            return met.lv().DeltaPhi(ll);
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("delta phi between lead lepton and met"); {
+        *cutflow << HFTname("dphi_met_l0");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            TLorentzVector l0;
+            l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
+            return met.lv().DeltaPhi(l0);
+        };
+        *cutflow << SaveVar();
+    }
 
     *cutflow << NewVar("mt2"); {
         *cutflow << HFTname("mt2");
@@ -1130,12 +1137,12 @@ int main(int argc, char* argv[])
         cosB_4 = v_s.Dot(v_v2);
 
         // angle between invisible
-        dphi_v1_i1_ss = -1.;//v1.GetFourVector(ss).DeltaPhi(i1.GetFourVector(ss));
-        dphi_s1_s2_ss = -1.;//s1.GetFourVector(ss).DeltaPhi(s2.GetFourVector(ss)); 
+        dphi_v1_i1_ss = v1.GetFourVector(ss).DeltaPhi(i1.GetFourVector(ss));
+        dphi_s1_s2_ss = s1.GetFourVector(ss).DeltaPhi(s2.GetFourVector(ss)); 
 
 
-        dphiS_I_ss = -1.;//s1.GetFourVector(ss).DeltaPhi(i1.GetFourVector(ss));
-        dphiS_I_s1 = -1.;//s1.GetFourVector(ss).DeltaPhi(i1.GetFourVector(s1));
+        dphiS_I_ss = s1.GetFourVector(ss).DeltaPhi(i1.GetFourVector(ss));
+        dphiS_I_s1 = s1.GetFourVector(ss).DeltaPhi(i1.GetFourVector(s1));
         
         
 
@@ -1460,830 +1467,830 @@ int main(int argc, char* argv[])
         };
         *cutflow << SaveVar();
     }
-//
-//    ////////////////////////////////////////////////////////////////////////////
-//    ////////////////////////////////////////////////////////////////////////////
-//    ////////////////////////////////////////////////////////////////////////////
-//    ////////////////////////////////////////////////////////////////////////////
-//    //
-//    // RESTFRAMES - 2 jets, 2 leptons
-//    // RESTFRAMES - 2 jets, 2 leptons
-//    // RESTFRAMES - 2 jets, 2 leptons
-//    // RESTFRAMES - 2 jets, 2 leptons
-//    //
-//    ////////////////////////////////////////////////////////////////////////////
-//    ////////////////////////////////////////////////////////////////////////////
-//    ////////////////////////////////////////////////////////////////////////////
-//    ////////////////////////////////////////////////////////////////////////////
-/////*
-//    double xshat;
-//    double xgaminv;
-//    double xRPT;
-//    double xRPZ;
-//    double xcosSS;
-//    double xdphiLSS;
-//    double xMS;
-//    double xPS;
-//    double xMSS;
-//    double xgaminvSS;
-//    double xDeltaBetaSS;
-//    double xDPD_vSS;
-//    double xDPB_vSS;
-//    int xNV[2]; // number of visible objects in hemisphere
-//    double xcosS[2]; // cosine stop decay angle
-//    double xcosC[2]; // cosine intermediate child decay angle
-//    double xdphiSC[2]; // cosine between stop and child decay planes
-//    double xRCS[2]; // ratio of child and stop masses (w/ WIMP masses subtracted);
-//    double xjet1PT[2]; // first leading jet pT associated with this hemisphere
-//    double xjet2PT[2]; // second leading jet pT associated with this hemisphere
-//    double xPinv[2]; // Pinv / HS
-//    double xH_11_SS;
-//    double xH_21_SS;
-//    double xH_41_SS;
-//    double xH_42_SS;
-//    double xH_11_S1;
-//    double xH_21_S1;
-//    double xH_11_SS_T;
-//    double xH_21_SS_T;
-//    double xH_41_SS_T;
-//    double xH_42_SS_T;
-//    double xH_11_S1_T;
-//    double xH_21_S1_T;
-//
-//    double xRPT_H_11_SS; 
-//    double xRPT_H_21_SS; 
-//    double xRPT_H_41_SS; 
-//    double xRPT_H_42_SS; 
-//    double xRPZ_H_11_SS; 
-//    double xRPZ_H_21_SS; 
-//    double xRPZ_H_41_SS; 
-//    double xRPZ_H_42_SS; 
-//    double xRPT_H_11_SS_T; 
-//    double xRPT_H_21_SS_T; 
-//    double xRPT_H_41_SS_T; 
-//    double xRPT_H_42_SS_T; 
-//    double xRPZ_H_11_SS_T; 
-//    double xRPZ_H_21_SS_T; 
-//    double xRPZ_H_41_SS_T; 
-//    double xRPZ_H_42_SS_T; 
-//
-//    double xdphiVS_I[2];
-//
-//    // feb 1 vars
-//    //double xCosP1;
-//    //double xCosP2;
-//
-//
-//    *cutflow << [&](Superlink* sl, var_void*) {
-//        if(sjets.size()>=2 && bjets.size()>=1) {
-//
-//            // setup the analysis tree
-//            LabRecoFrame xlab("xlab", "xlab");
-//            DecayRecoFrame xss("xss", "xss");
-//            DecayRecoFrame xs1("xs1", "xs1");
-//            DecayRecoFrame xs2("xs2", "xs2");
-//            DecayRecoFrame xc1("xc1", "xc1");
-//            DecayRecoFrame xc2("xc2", "xc2");
-//            VisibleRecoFrame xv1s("xv1s", "xv1s");
-//            VisibleRecoFrame xv2s("xv2s", "xv2s");
-//            InvisibleRecoFrame xi1("xi1", "xi1");
-//            VisibleRecoFrame xv1c("xv1c", "xv1c");
-//            VisibleRecoFrame xv2c("xv2c", "xv2c");
-//            InvisibleRecoFrame xi2("xi2", "xi2");
-//
-//            xlab.SetChildFrame(xss);
-//            xss.AddChildFrame(xs1);
-//            xss.AddChildFrame(xs2);
-//            xs1.AddChildFrame(xc1);
-//            xs1.AddChildFrame(xv1s);
-//            xc1.AddChildFrame(xi1);
-//            xc1.AddChildFrame(xv1c);
-//            xs2.AddChildFrame(xc2);
-//            xs2.AddChildFrame(xv2s);
-//            xc2.AddChildFrame(xi2);
-//            xc2.AddChildFrame(xv2c);
-//
-//            // check that the decay tree is connected properly
-//            if(!xlab.InitializeTree()) {
-//                cout << analysis_name << "    RestFrames::InitializeTree ERROR (" << __LINE__ <<")    Unable to initialize tree from lab frame. Exiting." << endl;
-//                exit(1);
-//            }
-//
-//
-//            // define groupes
-//
-//            InvisibleGroup xinv("xinv", "x-invisible gruop jigsaws");
-//            xinv.AddFrame(xi1);
-//            xinv.AddFrame(xi2);
-//
-//            CombinatoricGroup xvis("xvis", "x-visible object jigsaws");
-//
-//            // visible frames in first decay step must always have at least one element
-//            xvis.AddFrame(xv1s);
-//            xvis.AddFrame(xv2s);
-//            xvis.SetNElementsForFrame(xv1s, 1, false);
-//            xvis.SetNElementsForFrame(xv2s, 1, false);
-//            // visible frames in second decay step can have zero elements
-//            xvis.AddFrame(xv1c);
-//            xvis.AddFrame(xv2c);
-//            xvis.SetNElementsForFrame(xv1c, 0, false);
-//            xvis.SetNElementsForFrame(xv2c, 0, false);
-//
-//            // define jigsaws
-//            SetMassInvJigsaw xMinMassJigsaw("xminmass", "x-Invisible system mass jigsaw");
-//            xinv.AddJigsaw(xMinMassJigsaw);
-//            SetRapidityInvJigsaw xRapidityJigsaw("xRapidity", "x-Invisible system rapidity jigsaw");
-//            xinv.AddJigsaw(xRapidityJigsaw);
-//            xRapidityJigsaw.AddVisibleFrames((xlab.GetListVisibleFrames()));
-//            ContraBoostInvJigsaw xContraBoostJigsaw("xContra", "x-Contraboost invariant jigsaw");
-//            xinv.AddJigsaw(xContraBoostJigsaw);
-//            xContraBoostJigsaw.AddVisibleFrames((xs1.GetListVisibleFrames()), 0);
-//            xContraBoostJigsaw.AddVisibleFrames((xs2.GetListVisibleFrames()), 1);
-//            xContraBoostJigsaw.AddInvisibleFrames((xs1.GetListInvisibleFrames()), 0);
-//            xContraBoostJigsaw.AddInvisibleFrames((xs2.GetListInvisibleFrames()), 1);
-//
-//            MinMassesCombJigsaw xHemiJigsaw("xHemi", "x-Minimize m_{V_{1,2}} jigsaw");
-//            xvis.AddJigsaw(xHemiJigsaw);
-//            xHemiJigsaw.AddFrame(xv1s, 0);
-//            xHemiJigsaw.AddFrame(xv2s, 1);
-//            xHemiJigsaw.AddFrame(xv1c, 0);
-//            xHemiJigsaw.AddFrame(xv2c, 1);
-//
-//            MinMassesCombJigsaw x1HemiJigsaw("x-1 Hemi", "x-1 Minimize m_{C_{a}} jigsaw");
-//            xvis.AddJigsaw(x1HemiJigsaw);
-//            x1HemiJigsaw.AddFrame(xv1s, 0);
-//            x1HemiJigsaw.AddFrame(xv1c, 1);
-//            x1HemiJigsaw.AddFrame(xi1, 1);
-//
-//            MinMassesCombJigsaw x2HemiJigsaw("x-2 Hemi", "x-2 Minimize m_{C_{b}} jigsaw");
-//            xvis.AddJigsaw(x2HemiJigsaw);
-//            x2HemiJigsaw.AddFrame(xv2s, 0);
-//            x2HemiJigsaw.AddFrame(xv2c, 1);
-//            x2HemiJigsaw.AddFrame(xi2, 1);
-//
-//            // check that the jigsaws are in place
-//            if(!xlab.InitializeAnalysis()) {
-//                cout << analysis_name << "    RestFrames::InitializeAnalysis ERROR (" << __LINE__ << ")    Unable to initialize analysis from lab frame. Exiting." << endl;
-//                exit(1);
-//            }
-//
-//            // clear the event for sho
-//            xlab.ClearEvent();
-//
-//            // set the met
-//            TVector3 xmet3vector(sl->met->lv().Px(), sl->met->lv().Py(), sl->met->lv().Pz());
-//            xinv.SetLabFrameThreeVector(xmet3vector);
-//
-//            // set up the jets and leptons
-//            //vector<TLorentzVector> xjets;
-//            //TLorentzVector l1, l2;
-//
-//            //l1.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
-//            //l2.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
-//            //for(int ij = 0; ij < (int)jets.size(); ij++) {
-//            //    TLorentzVector xj;
-//            //    xj.SetPtEtaPhiM(jets.at(ij)->Pt(), jets.at(ij)->Eta(), jets.at(ij)->Phi(), jets.at(ij)->M());
-//            //    xjets.push_back(xj);
-//            //}
-//
-//            //vector<RFKey> jetID;
-//            //jetID.push_back(xvis.AddLabFrameFourVector(l1));
-//            //jetID.push_back(xvis.AddLabFrameFourVector(l2));
-//            //for(int ij = 0; ij < (int)xjets.size(); ij++) {
-//            //    jetID.push_back(xvis.AddLabFrameFourVector(xjets.at(ij)));
-//            //}
-//
-//
-//            TLorentzVector j1, j2, l1, l2;
-//            j1.SetPtEtaPhiM(jets.at(0)->Pt(), jets.at(0)->Eta(), jets.at(0)->Phi(), jets.at(0)->M());
-//            j2.SetPtEtaPhiM(jets.at(1)->Pt(), jets.at(1)->Eta(), jets.at(1)->Phi(), jets.at(1)->M());
-//            l1.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
-//            l2.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Eta(), leptons.at(1)->M());
-//
-//            vector<RFKey> jetID;
-//            jetID.push_back(xvis.AddLabFrameFourVector(j1));
-//            jetID.push_back(xvis.AddLabFrameFourVector(j2));
-//
-//            vector<RFKey> lepID;
-//            lepID.push_back(xvis.AddLabFrameFourVector(l1));
-//            lepID.push_back(xvis.AddLabFrameFourVector(l2));
-//
-//
-//            // analyze that
-//            xlab.AnalyzeEvent();
-//
-//            DecayRecoFrame* S[2];
-//            DecayRecoFrame* C[2];
-//            VisibleRecoFrame* VS[2];
-//            VisibleRecoFrame* VC[2];
-//            InvisibleRecoFrame* I[2];
-//            //randomize
-//            int flip = (gRandom->Rndm() > 0.5);
-//            S[flip] = &xs1;
-//            S[(flip+1)%2] = &xs2;
-//            C[flip] = &xc1;
-//            C[(flip+1)%2] = &xc2;
-//            VS[flip] = &xv1s;
-//            VS[(flip+1)%2] = &xv2s;
-//            VC[flip] = &xv1c;
-//            VC[(flip+1)%2] = &xv2c;
-//            I[flip] = &xi1;
-//            I[(flip+1)%2] = &xi2;
-//
-//
-//            //////////////////////////////////////
-//            // Observables
-//            //////////////////////////////////////
-//
-//
-//            // total CM mass
-//            xshat = xss.GetMass();
-//            // 'mass-less' stop assumption gamma in CM frame
-//            xgaminv = xss.GetVisibleShape();
-//
-//            TVector3 xvPSS = xss.GetFourVector(xlab).Vect();
-//
-//            // ratio of CM pT to CM mass
-//            xRPT = xvPSS.Pt() / (xvPSS.Pt() + xshat/4.);
-//            // ratio of CM pz to CM mass
-//            xRPZ = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xshat/4.);
-//            // cos decay angle of ss system
-//            xcosSS = xss.GetCosDecayAngle();
-//            // delta phi between lab and SS decay planes
-//            xdphiLSS = xlab.GetDeltaPhiDecayPlanes(xss);
-//
-//
-//            TLorentzVector vVS1 = S[0]->GetVisibleFourVector(*S[0]);
-//            TLorentzVector vVS2 = S[1]->GetVisibleFourVector(*S[1]);
-//
-//            // stop mass
-//            xMS = (vVS1.M2() - vVS2.M2()) / (2.*(vVS1.E() - vVS2.E()));
-//
-//            xPS = S[0]->GetMomentum(xss);
-//            xMSS = 2.*sqrt(xPS*xPS + xMS*xMS);
-//            xgaminvSS = 2.*xMS/xMSS;
-//            double beta = sqrt(1.-xgaminv*xgaminv);
-//            double betaSS = sqrt(1.-xgaminvSS*xgaminvSS);
-//
-//            // velocity difference between 'massive' and 'mass-less'
-//            xDeltaBetaSS = -(betaSS-beta)/(1.-betaSS*beta);
-//
-//            // dleta phi between SS visible decay products and SS decay axis
-//            xDPD_vSS = xss.GetDeltaPhiDecayVisible();
-//            // delta phi between SS visible decay products and SS momentum
-//            xDPB_vSS = xss.GetDeltaPhiBoostVisible();
-//
-//
-//            // number of visible objects in hemisphere
-//            for(int i = 0; i < 2; i++) {
-//                xNV[i] = xvis.GetNElementsInFrame(*VS[i]); 
-//                xNV[i] += xvis.GetNElementsInFrame(*VC[i]);
-//
-//                TVector3 xvP1 = VS[i]->GetFourVector(*S[i]).Vect();
-//                TVector3 xvP2 = VC[i]->GetFourVector(*S[i]).Vect();
-//                xPinv[i] = 2.*(xvP1+xvP2).Mag()/(xvP1.Mag()+xvP2.Mag() + (xvP1+xvP2).Mag());
-//
-//                xcosS[i] = S[i]->GetCosDecayAngle();
-//
-//                int N = jetID.size();
-//                double pTmax[2]; pTmax[0] = -1.; pTmax[1] = -1.;
-//                for(int j = 0; j < N; j++) {
-//                    const RestFrame& frame = xvis.GetFrame(jetID[j]);
-//                    if(VS[i]->IsSame(frame) || VC[i]->IsSame(frame)) { // jet is in hemisphere 'i'
-//                        double pT_ = xvis.GetLabFrameFourVector(jetID[j]).Pt();
-//                        if(pT_ > pTmax[0]) {
-//                            pTmax[1] = pTmax[0];
-//                            pTmax[0] = pT_;
-//                        } else {
-//                            if(pT_ > pTmax[1]) pTmax[1] = pT_;
-//                        }
-//                    }
-//                } // j
-//
-//                xjet1PT[i] = pTmax[0]; // lead visible object pT in hemisphere i
-//                xjet2PT[i] = pTmax[1]; // sub lead visible object pT in hemisphere i
-//
-//                xdphiVS_I[i] = VS[i]->GetFourVector(*S[i]).DeltaPhi(I[i]->GetFourVector(*S[i]));
-//
-//                if(xNV[i] > 1) {
-//                    xcosS[i] = C[i]->GetCosDecayAngle();
-//                    xdphiSC[i] = S[i]->GetDeltaPhiDecayPlanes(*C[i]);
-//                    xRCS[i] = (C[i]->GetMass() - I[i]->GetMass())/(S[i]->GetMass()-I[i]->GetMass());
-//
-//                } else {
-//                    xcosS[i] = -2;
-//                    xdphiSC[i] = -5;
-//                    xRCS[i] = -5;
-//                }
-//                
-//            } // i
-//
-//            ////////////////////////////////////////////////////////////
-//            // scale variables
-//            ////////////////////////////////////////////////////////////
-//
-//            TLorentzVector v_v1s_ss = VS[0]->GetFourVector(xss);
-//            TLorentzVector v_v2s_ss = VS[1]->GetFourVector(xss);
-//            TLorentzVector v_v1c_ss = VC[0]->GetFourVector(xss);
-//            TLorentzVector v_v2c_ss = VC[1]->GetFourVector(xss);
-//            TLorentzVector v_i1_ss  = I[0]->GetFourVector(xss);
-//            TLorentzVector v_i2_ss  = I[1]->GetFourVector(xss);
-//            if(v_i1_ss.Vect().Mag() > 1.0e4) {
-//                v_i1_ss.SetPtEtaPhiM(0, 0, 0, 0);
-//            }
-//            if(v_i2_ss.Vect().Mag() > 1.0e4) {
-//                v_i2_ss.SetPtEtaPhiM(0, 0, 0, 0);
-//            }
-//
-//            TLorentzVector v_v1s_s1 = VS[0]->GetFourVector(xs1);
-//            TLorentzVector v_v1c_s1 = VC[0]->GetFourVector(xs1);
-//            TLorentzVector v_i1_s1  = I[0]->GetFourVector(xs1);
-//
-//            // H_11_SS
-//            TVector3 p_vis_H11SS = (v_v1s_ss + v_v2s_ss + v_v1c_ss + v_v2c_ss).Vect();
-//            TVector3 p_invis_H11SS = (v_i1_ss + v_i2_ss).Vect();
-//            xH_11_SS = p_vis_H11SS.Mag() + p_invis_H11SS.Mag();
-//
-//            // H_21_SS
-//            TVector3 p_vis_1_H21SS = (v_v1s_ss + v_v1c_ss).Vect();
-//            TVector3 p_vis_2_H21SS = (v_v2s_ss + v_v2c_ss).Vect();
-//            TVector3 p_invis_H21SS = (v_i1_ss + v_i2_ss).Vect();
-//            xH_21_SS = p_vis_1_H21SS.Mag() + p_vis_2_H21SS.Mag() + p_invis_H21SS.Mag();
-//
-//            // H_41_SS
-//            xH_41_SS = v_v1s_ss.Vect().Mag() + v_v2s_ss.Vect().Mag() + v_v1c_ss.Vect().Mag() + v_v2c_ss.Vect().Mag() + (v_i1_ss + v_i2_ss).Vect().Mag();
-//
-//            // H_42_SS
-//            xH_42_SS = v_v1s_ss.Vect().Mag() + v_v2s_ss.Vect().Mag() + v_v1c_ss.Vect().Mag() + v_v2c_ss.Vect().Mag() + v_i1_ss.Vect().Mag() + v_i2_ss.Vect().Mag();
-//
-//            // H_11_S1
-//            xH_11_S1 = (v_v1s_s1+v_v1c_s1).Vect().Mag() + v_i1_s1.Vect().Mag();
-//
-//            // H_21_S1
-//            xH_21_S1 = v_v1s_s1.Vect().Mag() + v_v1c_s1.Vect().Mag() + v_i1_s1.Vect().Mag();
-//
-//            ////////////////
-//            // transverse scale variables
-//            ////////////////
-//            TVector3 tp_v1s_ss = v_v1s_ss.Vect(); tp_v1s_ss.SetZ(0.);
-//            TVector3 tp_v2s_ss = v_v2s_ss.Vect(); tp_v2s_ss.SetZ(0.);
-//            TVector3 tp_v1c_ss = v_v1c_ss.Vect(); tp_v1c_ss.SetZ(0.);
-//            TVector3 tp_v2c_ss = v_v2c_ss.Vect(); tp_v2c_ss.SetZ(0.);
-//            TVector3 tp_i1_ss  = v_i1_ss.Vect();  tp_i1_ss.SetZ(0.);
-//            TVector3 tp_i2_ss  = v_i2_ss.Vect();  tp_i2_ss.SetZ(0.);
-//
-//            TVector3 tp_v1s_s1 = v_v1s_s1.Vect(); tp_v1s_s1.SetZ(0.);
-//            TVector3 tp_v1c_s1 = v_v1c_s1.Vect(); tp_v1c_s1.SetZ(0.);
-//            TVector3 tp_i1_s1  = v_i1_s1.Vect();  tp_i1_s1.SetZ(0.);
-//
-//            // H_11_SS_T
-//            xH_11_SS_T = (tp_v1s_ss + tp_v2s_ss + tp_v1c_ss + tp_v2c_ss).Mag() + (tp_i1_ss + tp_i2_ss).Mag();
-//
-//            // H_21_SS_T
-//            xH_21_SS_T = (tp_v1s_ss + tp_v1c_ss).Mag() + (tp_v2s_ss + tp_v2c_ss).Mag() + (tp_i1_ss + tp_i2_ss).Mag();
-//
-//            // H_41_SS_T
-//            xH_41_SS_T = tp_v1s_ss.Mag() + tp_v2s_ss.Mag() + tp_v1c_ss.Mag() + tp_v2c_ss.Mag() + (tp_i1_ss+tp_i2_ss).Mag();
-//
-//            // H_42_SS_T
-//            xH_42_SS_T = tp_v1s_ss.Mag() + tp_v2s_ss.Mag() + tp_v1c_ss.Mag() + tp_v2c_ss.Mag() + tp_i1_ss.Mag() + tp_i2_ss.Mag();
-//
-//            // H_11_S1_T
-//            xH_11_S1_T = (tp_v1s_s1 + tp_v1c_s1).Mag() + tp_i1_s1.Mag();
-//
-//            // H_21_S1_T
-//            xH_21_S1_T = tp_v1s_s1.Mag() + tp_v1c_s1.Mag() + tp_i1_s1.Mag();
-//        
-//
-//            xRPT_H_11_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_11_SS/4.);
-//            xRPT_H_21_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_21_SS/4.);
-//            xRPT_H_41_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_41_SS/4.);
-//            xRPT_H_42_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_42_SS/4.);
-//            xRPZ_H_11_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_11_SS/4.);
-//            xRPZ_H_21_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_21_SS/4.);
-//            xRPZ_H_41_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_41_SS/4.);
-//            xRPZ_H_42_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_42_SS/4.);
-//
-//            xRPT_H_11_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_11_SS_T/4.);
-//            xRPT_H_21_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_21_SS_T/4.);
-//            xRPT_H_41_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_41_SS_T/4.);
-//            xRPT_H_42_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_42_SS_T/4.);
-//            xRPZ_H_11_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_11_SS_T/4.);
-//            xRPZ_H_21_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_21_SS_T/4.);
-//            xRPZ_H_41_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_41_SS_T/4.);
-//            xRPZ_H_42_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_42_SS_T/4.);
-//
-//
-//            ///////////////////////////
-//            // feb 1 variables
-//            //xCosP1 = S[0]->GetCosDecayAngle(I[0]);
-//            //xCosP2 = S[1]->GetCosDecayAngle(I[1]);
-//
-//        } // njets == 2
-//    };
-//
-//    *cutflow << NewVar("xshat"); {
-//        *cutflow << HFTname("xshat");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xshat;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xgaminv"); {
-//        *cutflow << HFTname("xgaminv");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xgaminv;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPT"); {
-//        *cutflow << HFTname("xRPT");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPT;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPZ"); {
-//        *cutflow << HFTname("xRPZ");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPZ;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xcosSS"); {
-//        *cutflow << HFTname("xcosSS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xcosSS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xdphiLSS"); {
-//        *cutflow << HFTname("xdphiLSS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xdphiLSS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xMS"); {
-//        *cutflow << HFTname("xMS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xMS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xPS"); {
-//        *cutflow << HFTname("xPS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xPS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xMSS"); {
-//        *cutflow << HFTname("xMSS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xMSS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xgaminvSS"); {
-//        *cutflow << HFTname("xgaminvSS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xgaminvSS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xDeltaBetaSS"); {
-//        *cutflow << HFTname("xDeltaBetaSS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xDeltaBetaSS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xDPD_vSS"); {
-//        *cutflow << HFTname("xDPD_vSS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xDPD_vSS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xDPB_vSS"); {
-//        *cutflow << HFTname("xDPB_vSS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xDPB_vSS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xNV"); {
-//        *cutflow << HFTname("xNV");
-//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-//            vector<double> out;
-//            out.clear();
-//            out.push_back(xNV[0]);
-//            out.push_back(xNV[1]);
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xNV_0"); {
-//        *cutflow << HFTname("xNV_0");
-//        *cutflow << [&](Superlink* sl, var_int*) -> int {
-//            return xNV[0];
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xNV_1"); {
-//        *cutflow << HFTname("xNV_1");
-//        *cutflow << [&](Superlink* sl, var_int*) -> int {
-//            return xNV[1];
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xcosS"); {
-//        *cutflow << HFTname("xcosS");
-//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-//            vector<double> out;
-//            out.clear();
-//            out.push_back(xcosS[0]);
-//            out.push_back(xcosS[1]);
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xcosC"); {
-//        *cutflow << HFTname("xcosC");
-//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-//            vector<double> out;
-//            out.clear();
-//            out.push_back(xcosC[0]);
-//            out.push_back(xcosC[1]);
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xdphiSC"); {
-//        *cutflow << HFTname("xdphiSC");
-//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-//            vector<double> out;
-//            out.clear();
-//            out.push_back(xdphiSC[0]);
-//            out.push_back(xdphiSC[1]);
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRCS"); {
-//        *cutflow << HFTname("xRCS");
-//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-//            vector<double> out;
-//            out.clear();
-//            out.push_back(xRCS[0]);
-//            out.push_back(xRCS[1]);
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xjet1PT"); {
-//        *cutflow << HFTname("xjet1PT");
-//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-//            vector<double> out;
-//            out.clear();
-//            out.push_back(xjet1PT[0]);
-//            out.push_back(xjet1PT[1]);
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xjet2PT"); {
-//        *cutflow << HFTname("xjet2PT");
-//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-//            vector<double> out;
-//            out.clear();
-//            out.push_back(xjet2PT[0]);
-//            out.push_back(xjet2PT[1]);
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xPinv"); {
-//        *cutflow << HFTname("xPinv");
-//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-//            vector<double> out;
-//            out.clear();
-//            out.push_back(xPinv[0]);
-//            out.push_back(xPinv[1]);
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xH_11_SS"); {
-//        *cutflow << HFTname("xH_11_SS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xH_11_SS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xH_21_SS"); {
-//        *cutflow << HFTname("xH_21_SS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xH_21_SS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xH_41_SS"); {
-//        *cutflow << HFTname("xH_41_SS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xH_41_SS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xH_42_SS"); {
-//        *cutflow << HFTname("xH_42_SS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xH_42_SS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xH_11_S1"); {
-//        *cutflow << HFTname("xH_11_S1");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xH_11_S1;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xH_21_S1"); {
-//        *cutflow << HFTname("xH_21_S1");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xH_21_S1;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xH_11_SS_T"); {
-//        *cutflow << HFTname("xH_11_SS_T");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xH_11_SS_T;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xH_21_SS_T"); {
-//        *cutflow << HFTname("xH_21_SS_T");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xH_21_SS_T;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xH_41_SS_T"); {
-//        *cutflow << HFTname("xH_41_SS_T");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xH_41_SS_T;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xH_42_SS_T"); {
-//        *cutflow << HFTname("xH_42_SS_T");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xH_42_SS_T;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xH_11_S1_T"); {
-//        *cutflow << HFTname("xH_11_S1_T");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xH_11_S1_T;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xH_21_S1_T"); {
-//        *cutflow << HFTname("xH_21_S1_T");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xH_21_S1_T;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPT_H_11_SS"); {
-//        *cutflow << HFTname("xRPT_H_11_SS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPT_H_11_SS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPT_H_21_SS"); {
-//        *cutflow << HFTname("xRPT_H_21_SS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPT_H_21_SS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPT_H_41_SS"); {
-//        *cutflow << HFTname("xRPT_H_41_SS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPT_H_41_SS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPT_H_42_SS"); {
-//        *cutflow << HFTname("xRPT_H_42_SS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPT_H_42_SS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    
-//    *cutflow << NewVar("xRPZ_H_11_SS"); {
-//        *cutflow << HFTname("xRPZ_H_11_SS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPZ_H_11_SS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPZ_H_21_SS"); {
-//        *cutflow << HFTname("xRPZ_H_21_SS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPZ_H_21_SS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPZ_H_41_SS"); {
-//        *cutflow << HFTname("xRPZ_H_41_SS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPZ_H_41_SS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPZ_H_42_SS"); {
-//        *cutflow << HFTname("xRPZ_H_42_SS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPZ_H_42_SS;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPT_H_11_SS_T"); {
-//        *cutflow << HFTname("xRPT_H_11_SS_T");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPT_H_11_SS_T;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPT_H_21_SS_T"); {
-//        *cutflow << HFTname("xRPT_H_21_SS_T");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPT_H_21_SS_T;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPT_H_41_SS_T"); {
-//        *cutflow << HFTname("xRPT_H_41_SS_T");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPT_H_41_SS_T;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPT_H_42_SS_T"); {
-//        *cutflow << HFTname("xRPT_H_42_SS_T");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPT_H_42_SS_T;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPZ_H_11_SS_T"); {
-//        *cutflow << HFTname("xRPZ_H_11_SS_T");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPZ_H_11_SS_T;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPZ_H_21_SS_T"); {
-//        *cutflow << HFTname("xRPZ_H_21_SS_T");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPZ_H_21_SS_T;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPZ_H_41_SS_T"); {
-//        *cutflow << HFTname("xRPZ_H_41_SS_T");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPZ_H_41_SS_T;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xRPZ_H_42_SS_T"); {
-//        *cutflow << HFTname("xRPZ_H_42_SS_T");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            return xRPZ_H_42_SS_T;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("xdphiVS_I"); {
-//        *cutflow << HFTname("xdphiVS_I");
-//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-//            vector<double> out;
-//            out.clear();
-//            out.push_back(xdphiVS_I[0]);
-//            out.push_back(xdphiVS_I[1]);
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//*/
+
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    //
+    // RESTFRAMES - 2 jets, 2 leptons
+    // RESTFRAMES - 2 jets, 2 leptons
+    // RESTFRAMES - 2 jets, 2 leptons
+    // RESTFRAMES - 2 jets, 2 leptons
+    //
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+/*
+    double xshat;
+    double xgaminv;
+    double xRPT;
+    double xRPZ;
+    double xcosSS;
+    double xdphiLSS;
+    double xMS;
+    double xPS;
+    double xMSS;
+    double xgaminvSS;
+    double xDeltaBetaSS;
+    double xDPD_vSS;
+    double xDPB_vSS;
+    int xNV[2]; // number of visible objects in hemisphere
+    double xcosS[2]; // cosine stop decay angle
+    double xcosC[2]; // cosine intermediate child decay angle
+    double xdphiSC[2]; // cosine between stop and child decay planes
+    double xRCS[2]; // ratio of child and stop masses (w/ WIMP masses subtracted);
+    double xjet1PT[2]; // first leading jet pT associated with this hemisphere
+    double xjet2PT[2]; // second leading jet pT associated with this hemisphere
+    double xPinv[2]; // Pinv / HS
+    double xH_11_SS;
+    double xH_21_SS;
+    double xH_41_SS;
+    double xH_42_SS;
+    double xH_11_S1;
+    double xH_21_S1;
+    double xH_11_SS_T;
+    double xH_21_SS_T;
+    double xH_41_SS_T;
+    double xH_42_SS_T;
+    double xH_11_S1_T;
+    double xH_21_S1_T;
+
+    double xRPT_H_11_SS; 
+    double xRPT_H_21_SS; 
+    double xRPT_H_41_SS; 
+    double xRPT_H_42_SS; 
+    double xRPZ_H_11_SS; 
+    double xRPZ_H_21_SS; 
+    double xRPZ_H_41_SS; 
+    double xRPZ_H_42_SS; 
+    double xRPT_H_11_SS_T; 
+    double xRPT_H_21_SS_T; 
+    double xRPT_H_41_SS_T; 
+    double xRPT_H_42_SS_T; 
+    double xRPZ_H_11_SS_T; 
+    double xRPZ_H_21_SS_T; 
+    double xRPZ_H_41_SS_T; 
+    double xRPZ_H_42_SS_T; 
+
+    double xdphiVS_I[2];
+
+    // feb 1 vars
+    //double xCosP1;
+    //double xCosP2;
+
+
+    *cutflow << [&](Superlink* sl, var_void*) {
+        if(sjets.size()>=2 && bjets.size()>=1) {
+
+            // setup the analysis tree
+            LabRecoFrame xlab("xlab", "xlab");
+            DecayRecoFrame xss("xss", "xss");
+            DecayRecoFrame xs1("xs1", "xs1");
+            DecayRecoFrame xs2("xs2", "xs2");
+            DecayRecoFrame xc1("xc1", "xc1");
+            DecayRecoFrame xc2("xc2", "xc2");
+            VisibleRecoFrame xv1s("xv1s", "xv1s");
+            VisibleRecoFrame xv2s("xv2s", "xv2s");
+            InvisibleRecoFrame xi1("xi1", "xi1");
+            VisibleRecoFrame xv1c("xv1c", "xv1c");
+            VisibleRecoFrame xv2c("xv2c", "xv2c");
+            InvisibleRecoFrame xi2("xi2", "xi2");
+
+            xlab.SetChildFrame(xss);
+            xss.AddChildFrame(xs1);
+            xss.AddChildFrame(xs2);
+            xs1.AddChildFrame(xc1);
+            xs1.AddChildFrame(xv1s);
+            xc1.AddChildFrame(xi1);
+            xc1.AddChildFrame(xv1c);
+            xs2.AddChildFrame(xc2);
+            xs2.AddChildFrame(xv2s);
+            xc2.AddChildFrame(xi2);
+            xc2.AddChildFrame(xv2c);
+
+            // check that the decay tree is connected properly
+            if(!xlab.InitializeTree()) {
+                cout << analysis_name << "    RestFrames::InitializeTree ERROR (" << __LINE__ <<")    Unable to initialize tree from lab frame. Exiting." << endl;
+                exit(1);
+            }
+
+
+            // define groupes
+
+            InvisibleGroup xinv("xinv", "x-invisible gruop jigsaws");
+            xinv.AddFrame(xi1);
+            xinv.AddFrame(xi2);
+
+            CombinatoricGroup xvis("xvis", "x-visible object jigsaws");
+
+            // visible frames in first decay step must always have at least one element
+            xvis.AddFrame(xv1s);
+            xvis.AddFrame(xv2s);
+            xvis.SetNElementsForFrame(xv1s, 1, false);
+            xvis.SetNElementsForFrame(xv2s, 1, false);
+            // visible frames in second decay step can have zero elements
+            xvis.AddFrame(xv1c);
+            xvis.AddFrame(xv2c);
+            xvis.SetNElementsForFrame(xv1c, 0, false);
+            xvis.SetNElementsForFrame(xv2c, 0, false);
+
+            // define jigsaws
+            SetMassInvJigsaw xMinMassJigsaw("xminmass", "x-Invisible system mass jigsaw");
+            xinv.AddJigsaw(xMinMassJigsaw);
+            SetRapidityInvJigsaw xRapidityJigsaw("xRapidity", "x-Invisible system rapidity jigsaw");
+            xinv.AddJigsaw(xRapidityJigsaw);
+            xRapidityJigsaw.AddVisibleFrames((xlab.GetListVisibleFrames()));
+            ContraBoostInvJigsaw xContraBoostJigsaw("xContra", "x-Contraboost invariant jigsaw");
+            xinv.AddJigsaw(xContraBoostJigsaw);
+            xContraBoostJigsaw.AddVisibleFrames((xs1.GetListVisibleFrames()), 0);
+            xContraBoostJigsaw.AddVisibleFrames((xs2.GetListVisibleFrames()), 1);
+            xContraBoostJigsaw.AddInvisibleFrames((xs1.GetListInvisibleFrames()), 0);
+            xContraBoostJigsaw.AddInvisibleFrames((xs2.GetListInvisibleFrames()), 1);
+
+            MinMassesCombJigsaw xHemiJigsaw("xHemi", "x-Minimize m_{V_{1,2}} jigsaw");
+            xvis.AddJigsaw(xHemiJigsaw);
+            xHemiJigsaw.AddFrame(xv1s, 0);
+            xHemiJigsaw.AddFrame(xv2s, 1);
+            xHemiJigsaw.AddFrame(xv1c, 0);
+            xHemiJigsaw.AddFrame(xv2c, 1);
+
+            MinMassesCombJigsaw x1HemiJigsaw("x-1 Hemi", "x-1 Minimize m_{C_{a}} jigsaw");
+            xvis.AddJigsaw(x1HemiJigsaw);
+            x1HemiJigsaw.AddFrame(xv1s, 0);
+            x1HemiJigsaw.AddFrame(xv1c, 1);
+            x1HemiJigsaw.AddFrame(xi1, 1);
+
+            MinMassesCombJigsaw x2HemiJigsaw("x-2 Hemi", "x-2 Minimize m_{C_{b}} jigsaw");
+            xvis.AddJigsaw(x2HemiJigsaw);
+            x2HemiJigsaw.AddFrame(xv2s, 0);
+            x2HemiJigsaw.AddFrame(xv2c, 1);
+            x2HemiJigsaw.AddFrame(xi2, 1);
+
+            // check that the jigsaws are in place
+            if(!xlab.InitializeAnalysis()) {
+                cout << analysis_name << "    RestFrames::InitializeAnalysis ERROR (" << __LINE__ << ")    Unable to initialize analysis from lab frame. Exiting." << endl;
+                exit(1);
+            }
+
+            // clear the event for sho
+            xlab.ClearEvent();
+
+            // set the met
+            TVector3 xmet3vector(sl->met->lv().Px(), sl->met->lv().Py(), sl->met->lv().Pz());
+            xinv.SetLabFrameThreeVector(xmet3vector);
+
+            // set up the jets and leptons
+            //vector<TLorentzVector> xjets;
+            //TLorentzVector l1, l2;
+
+            //l1.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
+            //l2.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
+            //for(int ij = 0; ij < (int)jets.size(); ij++) {
+            //    TLorentzVector xj;
+            //    xj.SetPtEtaPhiM(jets.at(ij)->Pt(), jets.at(ij)->Eta(), jets.at(ij)->Phi(), jets.at(ij)->M());
+            //    xjets.push_back(xj);
+            //}
+
+            //vector<RFKey> jetID;
+            //jetID.push_back(xvis.AddLabFrameFourVector(l1));
+            //jetID.push_back(xvis.AddLabFrameFourVector(l2));
+            //for(int ij = 0; ij < (int)xjets.size(); ij++) {
+            //    jetID.push_back(xvis.AddLabFrameFourVector(xjets.at(ij)));
+            //}
+
+
+            TLorentzVector j1, j2, l1, l2;
+            j1.SetPtEtaPhiM(jets.at(0)->Pt(), jets.at(0)->Eta(), jets.at(0)->Phi(), jets.at(0)->M());
+            j2.SetPtEtaPhiM(jets.at(1)->Pt(), jets.at(1)->Eta(), jets.at(1)->Phi(), jets.at(1)->M());
+            l1.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
+            l2.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Eta(), leptons.at(1)->M());
+
+            vector<RFKey> jetID;
+            jetID.push_back(xvis.AddLabFrameFourVector(j1));
+            jetID.push_back(xvis.AddLabFrameFourVector(j2));
+
+            vector<RFKey> lepID;
+            lepID.push_back(xvis.AddLabFrameFourVector(l1));
+            lepID.push_back(xvis.AddLabFrameFourVector(l2));
+
+
+            // analyze that
+            xlab.AnalyzeEvent();
+
+            DecayRecoFrame* S[2];
+            DecayRecoFrame* C[2];
+            VisibleRecoFrame* VS[2];
+            VisibleRecoFrame* VC[2];
+            InvisibleRecoFrame* I[2];
+            //randomize
+            int flip = (gRandom->Rndm() > 0.5);
+            S[flip] = &xs1;
+            S[(flip+1)%2] = &xs2;
+            C[flip] = &xc1;
+            C[(flip+1)%2] = &xc2;
+            VS[flip] = &xv1s;
+            VS[(flip+1)%2] = &xv2s;
+            VC[flip] = &xv1c;
+            VC[(flip+1)%2] = &xv2c;
+            I[flip] = &xi1;
+            I[(flip+1)%2] = &xi2;
+
+
+            //////////////////////////////////////
+            // Observables
+            //////////////////////////////////////
+
+
+            // total CM mass
+            xshat = xss.GetMass();
+            // 'mass-less' stop assumption gamma in CM frame
+            xgaminv = xss.GetVisibleShape();
+
+            TVector3 xvPSS = xss.GetFourVector(xlab).Vect();
+
+            // ratio of CM pT to CM mass
+            xRPT = xvPSS.Pt() / (xvPSS.Pt() + xshat/4.);
+            // ratio of CM pz to CM mass
+            xRPZ = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xshat/4.);
+            // cos decay angle of ss system
+            xcosSS = xss.GetCosDecayAngle();
+            // delta phi between lab and SS decay planes
+            xdphiLSS = xlab.GetDeltaPhiDecayPlanes(xss);
+
+
+            TLorentzVector vVS1 = S[0]->GetVisibleFourVector(*S[0]);
+            TLorentzVector vVS2 = S[1]->GetVisibleFourVector(*S[1]);
+
+            // stop mass
+            xMS = (vVS1.M2() - vVS2.M2()) / (2.*(vVS1.E() - vVS2.E()));
+
+            xPS = S[0]->GetMomentum(xss);
+            xMSS = 2.*sqrt(xPS*xPS + xMS*xMS);
+            xgaminvSS = 2.*xMS/xMSS;
+            double beta = sqrt(1.-xgaminv*xgaminv);
+            double betaSS = sqrt(1.-xgaminvSS*xgaminvSS);
+
+            // velocity difference between 'massive' and 'mass-less'
+            xDeltaBetaSS = -(betaSS-beta)/(1.-betaSS*beta);
+
+            // dleta phi between SS visible decay products and SS decay axis
+            xDPD_vSS = xss.GetDeltaPhiDecayVisible();
+            // delta phi between SS visible decay products and SS momentum
+            xDPB_vSS = xss.GetDeltaPhiBoostVisible();
+
+
+            // number of visible objects in hemisphere
+            for(int i = 0; i < 2; i++) {
+                xNV[i] = xvis.GetNElementsInFrame(*VS[i]); 
+                xNV[i] += xvis.GetNElementsInFrame(*VC[i]);
+
+                TVector3 xvP1 = VS[i]->GetFourVector(*S[i]).Vect();
+                TVector3 xvP2 = VC[i]->GetFourVector(*S[i]).Vect();
+                xPinv[i] = 2.*(xvP1+xvP2).Mag()/(xvP1.Mag()+xvP2.Mag() + (xvP1+xvP2).Mag());
+
+                xcosS[i] = S[i]->GetCosDecayAngle();
+
+                int N = jetID.size();
+                double pTmax[2]; pTmax[0] = -1.; pTmax[1] = -1.;
+                for(int j = 0; j < N; j++) {
+                    const RestFrame& frame = xvis.GetFrame(jetID[j]);
+                    if(VS[i]->IsSame(frame) || VC[i]->IsSame(frame)) { // jet is in hemisphere 'i'
+                        double pT_ = xvis.GetLabFrameFourVector(jetID[j]).Pt();
+                        if(pT_ > pTmax[0]) {
+                            pTmax[1] = pTmax[0];
+                            pTmax[0] = pT_;
+                        } else {
+                            if(pT_ > pTmax[1]) pTmax[1] = pT_;
+                        }
+                    }
+                } // j
+
+                xjet1PT[i] = pTmax[0]; // lead visible object pT in hemisphere i
+                xjet2PT[i] = pTmax[1]; // sub lead visible object pT in hemisphere i
+
+                xdphiVS_I[i] = VS[i]->GetFourVector(*S[i]).DeltaPhi(I[i]->GetFourVector(*S[i]));
+
+                if(xNV[i] > 1) {
+                    xcosS[i] = C[i]->GetCosDecayAngle();
+                    xdphiSC[i] = S[i]->GetDeltaPhiDecayPlanes(*C[i]);
+                    xRCS[i] = (C[i]->GetMass() - I[i]->GetMass())/(S[i]->GetMass()-I[i]->GetMass());
+
+                } else {
+                    xcosS[i] = -2;
+                    xdphiSC[i] = -5;
+                    xRCS[i] = -5;
+                }
+                
+            } // i
+
+            ////////////////////////////////////////////////////////////
+            // scale variables
+            ////////////////////////////////////////////////////////////
+
+            TLorentzVector v_v1s_ss = VS[0]->GetFourVector(xss);
+            TLorentzVector v_v2s_ss = VS[1]->GetFourVector(xss);
+            TLorentzVector v_v1c_ss = VC[0]->GetFourVector(xss);
+            TLorentzVector v_v2c_ss = VC[1]->GetFourVector(xss);
+            TLorentzVector v_i1_ss  = I[0]->GetFourVector(xss);
+            TLorentzVector v_i2_ss  = I[1]->GetFourVector(xss);
+            if(v_i1_ss.Vect().Mag() > 1.0e4) {
+                v_i1_ss.SetPtEtaPhiM(0, 0, 0, 0);
+            }
+            if(v_i2_ss.Vect().Mag() > 1.0e4) {
+                v_i2_ss.SetPtEtaPhiM(0, 0, 0, 0);
+            }
+
+            TLorentzVector v_v1s_s1 = VS[0]->GetFourVector(xs1);
+            TLorentzVector v_v1c_s1 = VC[0]->GetFourVector(xs1);
+            TLorentzVector v_i1_s1  = I[0]->GetFourVector(xs1);
+
+            // H_11_SS
+            TVector3 p_vis_H11SS = (v_v1s_ss + v_v2s_ss + v_v1c_ss + v_v2c_ss).Vect();
+            TVector3 p_invis_H11SS = (v_i1_ss + v_i2_ss).Vect();
+            xH_11_SS = p_vis_H11SS.Mag() + p_invis_H11SS.Mag();
+
+            // H_21_SS
+            TVector3 p_vis_1_H21SS = (v_v1s_ss + v_v1c_ss).Vect();
+            TVector3 p_vis_2_H21SS = (v_v2s_ss + v_v2c_ss).Vect();
+            TVector3 p_invis_H21SS = (v_i1_ss + v_i2_ss).Vect();
+            xH_21_SS = p_vis_1_H21SS.Mag() + p_vis_2_H21SS.Mag() + p_invis_H21SS.Mag();
+
+            // H_41_SS
+            xH_41_SS = v_v1s_ss.Vect().Mag() + v_v2s_ss.Vect().Mag() + v_v1c_ss.Vect().Mag() + v_v2c_ss.Vect().Mag() + (v_i1_ss + v_i2_ss).Vect().Mag();
+
+            // H_42_SS
+            xH_42_SS = v_v1s_ss.Vect().Mag() + v_v2s_ss.Vect().Mag() + v_v1c_ss.Vect().Mag() + v_v2c_ss.Vect().Mag() + v_i1_ss.Vect().Mag() + v_i2_ss.Vect().Mag();
+
+            // H_11_S1
+            xH_11_S1 = (v_v1s_s1+v_v1c_s1).Vect().Mag() + v_i1_s1.Vect().Mag();
+
+            // H_21_S1
+            xH_21_S1 = v_v1s_s1.Vect().Mag() + v_v1c_s1.Vect().Mag() + v_i1_s1.Vect().Mag();
+
+            ////////////////
+            // transverse scale variables
+            ////////////////
+            TVector3 tp_v1s_ss = v_v1s_ss.Vect(); tp_v1s_ss.SetZ(0.);
+            TVector3 tp_v2s_ss = v_v2s_ss.Vect(); tp_v2s_ss.SetZ(0.);
+            TVector3 tp_v1c_ss = v_v1c_ss.Vect(); tp_v1c_ss.SetZ(0.);
+            TVector3 tp_v2c_ss = v_v2c_ss.Vect(); tp_v2c_ss.SetZ(0.);
+            TVector3 tp_i1_ss  = v_i1_ss.Vect();  tp_i1_ss.SetZ(0.);
+            TVector3 tp_i2_ss  = v_i2_ss.Vect();  tp_i2_ss.SetZ(0.);
+
+            TVector3 tp_v1s_s1 = v_v1s_s1.Vect(); tp_v1s_s1.SetZ(0.);
+            TVector3 tp_v1c_s1 = v_v1c_s1.Vect(); tp_v1c_s1.SetZ(0.);
+            TVector3 tp_i1_s1  = v_i1_s1.Vect();  tp_i1_s1.SetZ(0.);
+
+            // H_11_SS_T
+            xH_11_SS_T = (tp_v1s_ss + tp_v2s_ss + tp_v1c_ss + tp_v2c_ss).Mag() + (tp_i1_ss + tp_i2_ss).Mag();
+
+            // H_21_SS_T
+            xH_21_SS_T = (tp_v1s_ss + tp_v1c_ss).Mag() + (tp_v2s_ss + tp_v2c_ss).Mag() + (tp_i1_ss + tp_i2_ss).Mag();
+
+            // H_41_SS_T
+            xH_41_SS_T = tp_v1s_ss.Mag() + tp_v2s_ss.Mag() + tp_v1c_ss.Mag() + tp_v2c_ss.Mag() + (tp_i1_ss+tp_i2_ss).Mag();
+
+            // H_42_SS_T
+            xH_42_SS_T = tp_v1s_ss.Mag() + tp_v2s_ss.Mag() + tp_v1c_ss.Mag() + tp_v2c_ss.Mag() + tp_i1_ss.Mag() + tp_i2_ss.Mag();
+
+            // H_11_S1_T
+            xH_11_S1_T = (tp_v1s_s1 + tp_v1c_s1).Mag() + tp_i1_s1.Mag();
+
+            // H_21_S1_T
+            xH_21_S1_T = tp_v1s_s1.Mag() + tp_v1c_s1.Mag() + tp_i1_s1.Mag();
+        
+
+            xRPT_H_11_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_11_SS/4.);
+            xRPT_H_21_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_21_SS/4.);
+            xRPT_H_41_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_41_SS/4.);
+            xRPT_H_42_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_42_SS/4.);
+            xRPZ_H_11_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_11_SS/4.);
+            xRPZ_H_21_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_21_SS/4.);
+            xRPZ_H_41_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_41_SS/4.);
+            xRPZ_H_42_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_42_SS/4.);
+
+            xRPT_H_11_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_11_SS_T/4.);
+            xRPT_H_21_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_21_SS_T/4.);
+            xRPT_H_41_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_41_SS_T/4.);
+            xRPT_H_42_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_42_SS_T/4.);
+            xRPZ_H_11_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_11_SS_T/4.);
+            xRPZ_H_21_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_21_SS_T/4.);
+            xRPZ_H_41_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_41_SS_T/4.);
+            xRPZ_H_42_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_42_SS_T/4.);
+
+
+            ///////////////////////////
+            // feb 1 variables
+            //xCosP1 = S[0]->GetCosDecayAngle(I[0]);
+            //xCosP2 = S[1]->GetCosDecayAngle(I[1]);
+
+        } // njets == 2
+    };
+
+    *cutflow << NewVar("xshat"); {
+        *cutflow << HFTname("xshat");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xshat;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xgaminv"); {
+        *cutflow << HFTname("xgaminv");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xgaminv;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPT"); {
+        *cutflow << HFTname("xRPT");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPT;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPZ"); {
+        *cutflow << HFTname("xRPZ");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPZ;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xcosSS"); {
+        *cutflow << HFTname("xcosSS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xcosSS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xdphiLSS"); {
+        *cutflow << HFTname("xdphiLSS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xdphiLSS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xMS"); {
+        *cutflow << HFTname("xMS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xMS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xPS"); {
+        *cutflow << HFTname("xPS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xPS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xMSS"); {
+        *cutflow << HFTname("xMSS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xMSS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xgaminvSS"); {
+        *cutflow << HFTname("xgaminvSS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xgaminvSS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xDeltaBetaSS"); {
+        *cutflow << HFTname("xDeltaBetaSS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xDeltaBetaSS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xDPD_vSS"); {
+        *cutflow << HFTname("xDPD_vSS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xDPD_vSS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xDPB_vSS"); {
+        *cutflow << HFTname("xDPB_vSS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xDPB_vSS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xNV"); {
+        *cutflow << HFTname("xNV");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            out.clear();
+            out.push_back(xNV[0]);
+            out.push_back(xNV[1]);
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xNV_0"); {
+        *cutflow << HFTname("xNV_0");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            return xNV[0];
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xNV_1"); {
+        *cutflow << HFTname("xNV_1");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            return xNV[1];
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xcosS"); {
+        *cutflow << HFTname("xcosS");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            out.clear();
+            out.push_back(xcosS[0]);
+            out.push_back(xcosS[1]);
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xcosC"); {
+        *cutflow << HFTname("xcosC");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            out.clear();
+            out.push_back(xcosC[0]);
+            out.push_back(xcosC[1]);
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xdphiSC"); {
+        *cutflow << HFTname("xdphiSC");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            out.clear();
+            out.push_back(xdphiSC[0]);
+            out.push_back(xdphiSC[1]);
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRCS"); {
+        *cutflow << HFTname("xRCS");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            out.clear();
+            out.push_back(xRCS[0]);
+            out.push_back(xRCS[1]);
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xjet1PT"); {
+        *cutflow << HFTname("xjet1PT");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            out.clear();
+            out.push_back(xjet1PT[0]);
+            out.push_back(xjet1PT[1]);
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xjet2PT"); {
+        *cutflow << HFTname("xjet2PT");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            out.clear();
+            out.push_back(xjet2PT[0]);
+            out.push_back(xjet2PT[1]);
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xPinv"); {
+        *cutflow << HFTname("xPinv");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            out.clear();
+            out.push_back(xPinv[0]);
+            out.push_back(xPinv[1]);
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xH_11_SS"); {
+        *cutflow << HFTname("xH_11_SS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xH_11_SS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xH_21_SS"); {
+        *cutflow << HFTname("xH_21_SS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xH_21_SS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xH_41_SS"); {
+        *cutflow << HFTname("xH_41_SS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xH_41_SS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xH_42_SS"); {
+        *cutflow << HFTname("xH_42_SS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xH_42_SS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xH_11_S1"); {
+        *cutflow << HFTname("xH_11_S1");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xH_11_S1;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xH_21_S1"); {
+        *cutflow << HFTname("xH_21_S1");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xH_21_S1;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xH_11_SS_T"); {
+        *cutflow << HFTname("xH_11_SS_T");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xH_11_SS_T;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xH_21_SS_T"); {
+        *cutflow << HFTname("xH_21_SS_T");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xH_21_SS_T;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xH_41_SS_T"); {
+        *cutflow << HFTname("xH_41_SS_T");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xH_41_SS_T;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xH_42_SS_T"); {
+        *cutflow << HFTname("xH_42_SS_T");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xH_42_SS_T;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xH_11_S1_T"); {
+        *cutflow << HFTname("xH_11_S1_T");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xH_11_S1_T;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xH_21_S1_T"); {
+        *cutflow << HFTname("xH_21_S1_T");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xH_21_S1_T;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPT_H_11_SS"); {
+        *cutflow << HFTname("xRPT_H_11_SS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPT_H_11_SS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPT_H_21_SS"); {
+        *cutflow << HFTname("xRPT_H_21_SS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPT_H_21_SS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPT_H_41_SS"); {
+        *cutflow << HFTname("xRPT_H_41_SS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPT_H_41_SS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPT_H_42_SS"); {
+        *cutflow << HFTname("xRPT_H_42_SS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPT_H_42_SS;
+        };
+        *cutflow << SaveVar();
+    }
+    
+    *cutflow << NewVar("xRPZ_H_11_SS"); {
+        *cutflow << HFTname("xRPZ_H_11_SS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPZ_H_11_SS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPZ_H_21_SS"); {
+        *cutflow << HFTname("xRPZ_H_21_SS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPZ_H_21_SS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPZ_H_41_SS"); {
+        *cutflow << HFTname("xRPZ_H_41_SS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPZ_H_41_SS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPZ_H_42_SS"); {
+        *cutflow << HFTname("xRPZ_H_42_SS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPZ_H_42_SS;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPT_H_11_SS_T"); {
+        *cutflow << HFTname("xRPT_H_11_SS_T");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPT_H_11_SS_T;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPT_H_21_SS_T"); {
+        *cutflow << HFTname("xRPT_H_21_SS_T");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPT_H_21_SS_T;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPT_H_41_SS_T"); {
+        *cutflow << HFTname("xRPT_H_41_SS_T");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPT_H_41_SS_T;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPT_H_42_SS_T"); {
+        *cutflow << HFTname("xRPT_H_42_SS_T");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPT_H_42_SS_T;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPZ_H_11_SS_T"); {
+        *cutflow << HFTname("xRPZ_H_11_SS_T");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPZ_H_11_SS_T;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPZ_H_21_SS_T"); {
+        *cutflow << HFTname("xRPZ_H_21_SS_T");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPZ_H_21_SS_T;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPZ_H_41_SS_T"); {
+        *cutflow << HFTname("xRPZ_H_41_SS_T");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPZ_H_41_SS_T;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xRPZ_H_42_SS_T"); {
+        *cutflow << HFTname("xRPZ_H_42_SS_T");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return xRPZ_H_42_SS_T;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("xdphiVS_I"); {
+        *cutflow << HFTname("xdphiVS_I");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            out.clear();
+            out.push_back(xdphiVS_I[0]);
+            out.push_back(xdphiVS_I[1]);
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+*/
 /*
     ////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////
@@ -3543,380 +3550,380 @@ int main(int argc, char* argv[])
 
 
 */
+/*
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    //
+    // RESTFRAMES -- COMPRESSED
+    // RESTFRAMES -- COMPRESSED
+    // RESTFRAMES -- COMPRESSED
+    //
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
-//    ////////////////////////////////////////////////////////////////////////////
-//    ////////////////////////////////////////////////////////////////////////////
-//    ////////////////////////////////////////////////////////////////////////////
-//    ////////////////////////////////////////////////////////////////////////////
-//    //
-//    // RESTFRAMES -- COMPRESSED
-//    // RESTFRAMES -- COMPRESSED
-//    // RESTFRAMES -- COMPRESSED
-//    //
-//    ////////////////////////////////////////////////////////////////////////////
-//    ////////////////////////////////////////////////////////////////////////////
-//    ////////////////////////////////////////////////////////////////////////////
-//    ////////////////////////////////////////////////////////////////////////////
-//
-//    int cN_ISR;
-//    int cN_V;
-//    int cNj_ISR;
-//    int cNj_V;
-//    int cNb_ISR;
-//    int cNb_V;
-//    double cpT_ISR;
-//    double cpT_I;
-//    double cpT_S;
-//    double cR_ISR;
-//    double cR_ISR_S;
-//    double cCosS;
-//    double cCosS_I;
-//    double cMS;
-//    double cMV;
-//    double cMISR;
-//
-//
-//    *cutflow << [&](Superlink* sl, var_void*) {
-//    ///////////////////////////////////////////
-//        if(sjets.size()>=2 && bjets.size()>=1) {
-//
-//            // setup the analysis tree
-//            LabRecoFrame        cLAB("cLAB", "cLAB");
-//            DecayRecoFrame      cCM("cCM", "cCM");
-//            DecayRecoFrame      cS("cS", "cS");
-//            VisibleRecoFrame    cISR("cISR", "cISR");
-//            VisibleRecoFrame    cV("cV", "cV");
-//            DecayRecoFrame      cINVLL("cINVLL", "cINVLL");
-//            DecayRecoFrame      cLL("cLL", "cLL");
-//            InvisibleRecoFrame  cI("cI", "cI");
-//            VisibleRecoFrame    cLEP1("cLEP1", "cLEP1");
-//            VisibleRecoFrame    cLEP2("cLEP2", "cLEP2");
-//
-//            // connect the tree according to our interpretation
-//            cLAB.SetChildFrame(cCM);
-//            cCM.AddChildFrame(cISR);
-//            cCM.AddChildFrame(cS);
-//            cS.AddChildFrame(cV);
-//            cS.AddChildFrame(cINVLL);
-//            cINVLL.AddChildFrame(cLL);
-//            cINVLL.AddChildFrame(cI);
-//            cLL.AddChildFrame(cLEP1);
-//            cLL.AddChildFrame(cLEP2);
-//
-//            // check that the decay tree is connected properly
-//            if(!cLAB.InitializeTree()) {
-//                cout << analysis_name << "    RestFrames::InitializeTree ERROR (" << __LINE__ << ")    Unable to initialize tree from lab frame. Exiting." << endl;
-//                exit(1);
-//            }
-//
-//            // define groups
-//            InvisibleGroup cINV("cINV", "c-Invisible system");
-//            cINV.AddFrame(cI);
-//
-//            // combinatoric for all of our jets (sjets & bjets)
-//            // put loosest restrictions on NElements (can always cut on these)
-//            CombinatoricGroup cVIS("cVIS", "c-Visible jets");
-//            cVIS.AddFrame(cISR);
-//            cVIS.SetNElementsForFrame(cISR,1,false);
-//            cVIS.AddFrame(cV);
-//            cVIS.SetNElementsForFrame(cV,0,false);
-//
-//            // set the invisible system mass to zero
-//            SetMassInvJigsaw cInvMass("cInvMass", "c-Invisible system mass to zero jigsaw");
-//            cINV.AddJigsaw(cInvMass);
-//           
-//            // define the rule to partition objects between "ISR" and "V"
-//            MinMassesCombJigsaw cSplitVis("cSplitVis", "Minimize M_{ISR} and M_{V} Jigsaw"); 
-//            cVIS.AddJigsaw(cSplitVis);
-//            // "0" group (ISR)
-//            cSplitVis.AddFrame(cISR, 0);
-//            // "1" group (V + I + LL)
-//            cSplitVis.AddFrame(cV,1);
-//            cSplitVis.AddFrame(cI,1);
-//            cSplitVis.AddFrame(cLL,1);
-//
-//            // check that the jigsaws are in place
-//            if(!cLAB.InitializeAnalysis()) {
-//                cout << analysis_name << "    RestFrames::InitializeAnalysis ERROR (" << __LINE__ << ")    Unable to initialize analysis from lab frame. Exiting." << endl;
-//                exit(1);
-//            }
-//
-//            // clear the event for sho
-//            cLAB.ClearEvent();
-//
-//            // set the met
-//            TVector3 cMET(sl->met->lv().Px(), sl->met->lv().Py(), sl->met->lv().Pz());
-//
-//            // vector of sjets
-//            vector<TLorentzVector> sJETS;
-//            for(int ij = 0; ij < (int)sjets.size(); ij++) {
-//                TLorentzVector j;
-//                j.SetPtEtaPhiM(sjets.at(ij)->Pt(), sjets.at(ij)->Eta(), sjets.at(ij)->Phi(), sjets.at(ij)->M());
-//                sJETS.push_back(j);
-//            }
-//            // vector of bjets
-//            vector<TLorentzVector> bJETS;
-//            for(int ib = 0; ib < (int)bjets.size(); ib++) {
-//                TLorentzVector b;
-//                b.SetPtEtaPhiM(bjets.at(ib)->Pt(), bjets.at(ib)->Eta(), bjets.at(ib)->Phi(), bjets.at(ib)->M());
-//                bJETS.push_back(b);
-//            }
-//
-//            // add the jets (in transverse view) to the combinatoric group and index each type
-//            vector<RFKey> sjetID;
-//            vector<RFKey> bjetID;
-//            for(int ij = 0; ij < (int)sJETS.size(); ij++) {
-//                TLorentzVector jet_ = sJETS[ij];
-//                jet_.SetPtEtaPhiM(jet_.Pt(), 0.0, jet_.Phi(), jet_.M());
-//                sjetID.push_back(cVIS.AddLabFrameFourVector(jet_));
-//            }
-//            for(int ib = 0; ib < (int)bJETS.size(); ib++) {
-//                TLorentzVector jet_ = bJETS[ib];
-//                jet_.SetPtEtaPhiM(jet_.Pt(), 0.0, jet_.Phi(), jet_.M());
-//                bjetID.push_back(cVIS.AddLabFrameFourVector(jet_));
-//            }
-//
-//            // add the met vector to the invisible system
-//            cINV.SetLabFrameThreeVector(cMET);
-//
-//            // add the leptons (in transverse view) to their frames
-//            TLorentzVector lep1, lep2;
-//            lep1.SetPtEtaPhiM(leptons.at(0)->Pt(), 0.0, leptons.at(0)->Phi(), leptons.at(0)->M());
-//            lep2.SetPtEtaPhiM(leptons.at(1)->Pt(), 0.0, leptons.at(1)->Phi(), leptons.at(1)->M());
-//            cLEP1.SetLabFrameFourVector(lep1);
-//            cLEP2.SetLabFrameFourVector(lep2);
-//            
-//
-//            // analyze the event
-//            if(!cLAB.AnalyzeEvent()) {
-//                cout << analysis_name << "    RestFrames::AnalyzeEvent ERROR (" << __LINE__ << ")    Unable to analyze event from lab frame. Exiting." << endl;
-//                exit(1);
-//            }
-//
-//            cN_ISR = cVIS.GetNElementsInFrame(cISR);
-//            cN_V   = cVIS.GetNElementsInFrame(cV);
-//            cNj_ISR = 0;
-//            cNj_V = 0;
-//            cNb_ISR = 0;
-//            cNb_V = 0;
-//
-//
-//            int nS = sjetID.size();
-//            for(int i = 0; i < nS; i++) {
-//                if(cVIS.GetFrame(sjetID[i]) == cISR) {
-//                    cNj_ISR++;
-//                }
-//                else if(cVIS.GetFrame(sjetID[i]) == cV) {
-//                    cNj_V++;
-//                }
-//            }
-//            int nB = bjetID.size();
-//            for(int i = 0; i < nB; i++) {
-//                if(cVIS.GetFrame(bjetID[i]) == cISR) {
-//                    cNb_ISR++;
-//                }
-//                else if(cVIS.GetFrame(bjetID[i]) == cV) {
-//                    cNb_V++;
-//                }
-//            }
-//
-//            TVector3 vP_ISR = cISR.GetFourVector(cCM).Vect();
-//            TVector3 vP_S = cS.GetFourVector(cCM).Vect();
-//            TVector3 vP_I   = cI.GetFourVector(cCM).Vect();
-//
-//            cpT_ISR = vP_ISR.Mag();
-//            cpT_S = vP_S.Mag();
-//            cpT_I = vP_I.Mag();
-//            cR_ISR = fabs(vP_I.Dot(vP_ISR.Unit())) / cpT_ISR;
-//            cR_ISR_S = fabs(vP_I.Dot(vP_S.Unit())) / cpT_S;
-//
-//            cCosS = cS.GetCosDecayAngle(); // decay angle relative to cINVLL decay
-//            cCosS_I = cS.GetCosDecayAngle(cI); // decay angle relative to the invisible system (a la two-body decay to cINV and cLL)
-//
-//            cMS = cS.GetMass();
-//            cMV = cV.GetMass();
-//            cMISR = cISR.GetMass();
-//        } // sjets >= 2 && bjest >= 1
-//
-//    }; // RESTFRAMES -- COMPRESSED [END]
-//
-//    *cutflow << NewVar("cN_ISR -- number of visible objects in the cISR frame"); {
-//        *cutflow << HFTname("cN_ISR");
-//        *cutflow << [&](Superlink* sl, var_int*) -> int {
-//            int out = -1;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cN_ISR;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("cN_V -- number of visible objects in the cV frame"); {
-//        *cutflow << HFTname("cN_V");
-//        *cutflow << [&](Superlink* sl, var_int*) -> int {
-//            int out = -1;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cN_V;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("cNj_ISR -- number of sjets in the cISR frame"); {
-//        *cutflow << HFTname("cNj_ISR");
-//        *cutflow << [&](Superlink* sl, var_int*) -> int {
-//            int out = -1;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cNj_ISR;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("cNj_V -- number of sjets in the cV frame"); {
-//        *cutflow << HFTname("cNj_V");
-//        *cutflow << [&](Superlink* sl, var_int*) -> int {
-//            int out = -1;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cNj_V;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("cNb_ISR -- number of bjets in the cISR frame"); {
-//        *cutflow << HFTname("cNb_ISR");
-//        *cutflow << [&](Superlink* sl, var_int*) -> int {
-//            int out = -1;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cNb_ISR;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("cNb_V -- number of bjets in the cV frame"); {
-//        *cutflow << HFTname("cNb_V");
-//        *cutflow << [&](Superlink* sl, var_int*) -> int {
-//            int out = -1;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cNb_V;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("cpT_ISR -- pT of cISR frame in the cCM restframe"); {
-//        *cutflow << HFTname("cpT_ISR");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -10.;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cpT_ISR;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("cpT_I -- pT of cI frame in the cCM restframe"); {
-//        *cutflow << HFTname("cpT_I");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -10.;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cpT_I;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("cpT_S -- pT of cS frame in the cCM restframe"); {
-//        *cutflow << HFTname("cpT_S");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -10.;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cpT_S;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("cR_ISR -- ratio of inv. system momentum to ISR momentum"); {
-//        *cutflow << HFTname("cR_ISR");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -5.;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cR_ISR;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("cR_ISR_S -- ratio of inv. system momtnum to S momentum"); {
-//        *cutflow << HFTname("cR_ISR_S");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -5.;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cR_ISR_S;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("cCosS -- cosine of decay of cS relative to the cINVLL decay frame"); {
-//        *cutflow << HFTname("cCosS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -5.;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cCosS;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("cCosS_I -- cosine of decay of cS relative to the cI frame"); {
-//        *cutflow << HFTname("cCosS_I");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -5.;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cCosS_I;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("cMS -- mass of the sparticle decay system cS"); {
-//        *cutflow << HFTname("cMS");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -10.;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cMS;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("cMV -- mass of the cV system"); {
-//        *cutflow << HFTname("cMV");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -10.;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cMV;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("cMISR -- mass of the cISR system"); {
-//        *cutflow << HFTname("cMISR");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -10.;
-//            if(sjets.size()>=2 && bjets.size()>=1) {
-//                out = cMISR;
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
+    int cN_ISR;
+    int cN_V;
+    int cNj_ISR;
+    int cNj_V;
+    int cNb_ISR;
+    int cNb_V;
+    double cpT_ISR;
+    double cpT_I;
+    double cpT_S;
+    double cR_ISR;
+    double cR_ISR_S;
+    double cCosS;
+    double cCosS_I;
+    double cMS;
+    double cMV;
+    double cMISR;
 
+
+    *cutflow << [&](Superlink* sl, var_void*) {
+    ///////////////////////////////////////////
+        if(sjets.size()>=2 && bjets.size()>=1) {
+
+            // setup the analysis tree
+            LabRecoFrame        cLAB("cLAB", "cLAB");
+            DecayRecoFrame      cCM("cCM", "cCM");
+            DecayRecoFrame      cS("cS", "cS");
+            VisibleRecoFrame    cISR("cISR", "cISR");
+            VisibleRecoFrame    cV("cV", "cV");
+            DecayRecoFrame      cINVLL("cINVLL", "cINVLL");
+            DecayRecoFrame      cLL("cLL", "cLL");
+            InvisibleRecoFrame  cI("cI", "cI");
+            VisibleRecoFrame    cLEP1("cLEP1", "cLEP1");
+            VisibleRecoFrame    cLEP2("cLEP2", "cLEP2");
+
+            // connect the tree according to our interpretation
+            cLAB.SetChildFrame(cCM);
+            cCM.AddChildFrame(cISR);
+            cCM.AddChildFrame(cS);
+            cS.AddChildFrame(cV);
+            cS.AddChildFrame(cINVLL);
+            cINVLL.AddChildFrame(cLL);
+            cINVLL.AddChildFrame(cI);
+            cLL.AddChildFrame(cLEP1);
+            cLL.AddChildFrame(cLEP2);
+
+            // check that the decay tree is connected properly
+            if(!cLAB.InitializeTree()) {
+                cout << analysis_name << "    RestFrames::InitializeTree ERROR (" << __LINE__ << ")    Unable to initialize tree from lab frame. Exiting." << endl;
+                exit(1);
+            }
+
+            // define groups
+            InvisibleGroup cINV("cINV", "c-Invisible system");
+            cINV.AddFrame(cI);
+
+            // combinatoric for all of our jets (sjets & bjets)
+            // put loosest restrictions on NElements (can always cut on these)
+            CombinatoricGroup cVIS("cVIS", "c-Visible jets");
+            cVIS.AddFrame(cISR);
+            cVIS.SetNElementsForFrame(cISR,1,false);
+            cVIS.AddFrame(cV);
+            cVIS.SetNElementsForFrame(cV,0,false);
+
+            // set the invisible system mass to zero
+            SetMassInvJigsaw cInvMass("cInvMass", "c-Invisible system mass to zero jigsaw");
+            cINV.AddJigsaw(cInvMass);
+           
+            // define the rule to partition objects between "ISR" and "V"
+            MinMassesCombJigsaw cSplitVis("cSplitVis", "Minimize M_{ISR} and M_{V} Jigsaw"); 
+            cVIS.AddJigsaw(cSplitVis);
+            // "0" group (ISR)
+            cSplitVis.AddFrame(cISR, 0);
+            // "1" group (V + I + LL)
+            cSplitVis.AddFrame(cV,1);
+            cSplitVis.AddFrame(cI,1);
+            cSplitVis.AddFrame(cLL,1);
+
+            // check that the jigsaws are in place
+            if(!cLAB.InitializeAnalysis()) {
+                cout << analysis_name << "    RestFrames::InitializeAnalysis ERROR (" << __LINE__ << ")    Unable to initialize analysis from lab frame. Exiting." << endl;
+                exit(1);
+            }
+
+            // clear the event for sho
+            cLAB.ClearEvent();
+
+            // set the met
+            TVector3 cMET(sl->met->lv().Px(), sl->met->lv().Py(), sl->met->lv().Pz());
+
+            // vector of sjets
+            vector<TLorentzVector> sJETS;
+            for(int ij = 0; ij < (int)sjets.size(); ij++) {
+                TLorentzVector j;
+                j.SetPtEtaPhiM(sjets.at(ij)->Pt(), sjets.at(ij)->Eta(), sjets.at(ij)->Phi(), sjets.at(ij)->M());
+                sJETS.push_back(j);
+            }
+            // vector of bjets
+            vector<TLorentzVector> bJETS;
+            for(int ib = 0; ib < (int)bjets.size(); ib++) {
+                TLorentzVector b;
+                b.SetPtEtaPhiM(bjets.at(ib)->Pt(), bjets.at(ib)->Eta(), bjets.at(ib)->Phi(), bjets.at(ib)->M());
+                bJETS.push_back(b);
+            }
+
+            // add the jets (in transverse view) to the combinatoric group and index each type
+            vector<RFKey> sjetID;
+            vector<RFKey> bjetID;
+            for(int ij = 0; ij < (int)sJETS.size(); ij++) {
+                TLorentzVector jet_ = sJETS[ij];
+                jet_.SetPtEtaPhiM(jet_.Pt(), 0.0, jet_.Phi(), jet_.M());
+                sjetID.push_back(cVIS.AddLabFrameFourVector(jet_));
+            }
+            for(int ib = 0; ib < (int)bJETS.size(); ib++) {
+                TLorentzVector jet_ = bJETS[ib];
+                jet_.SetPtEtaPhiM(jet_.Pt(), 0.0, jet_.Phi(), jet_.M());
+                bjetID.push_back(cVIS.AddLabFrameFourVector(jet_));
+            }
+
+            // add the met vector to the invisible system
+            cINV.SetLabFrameThreeVector(cMET);
+
+            // add the leptons (in transverse view) to their frames
+            TLorentzVector lep1, lep2;
+            lep1.SetPtEtaPhiM(leptons.at(0)->Pt(), 0.0, leptons.at(0)->Phi(), leptons.at(0)->M());
+            lep2.SetPtEtaPhiM(leptons.at(1)->Pt(), 0.0, leptons.at(1)->Phi(), leptons.at(1)->M());
+            cLEP1.SetLabFrameFourVector(lep1);
+            cLEP2.SetLabFrameFourVector(lep2);
+            
+
+            // analyze the event
+            if(!cLAB.AnalyzeEvent()) {
+                cout << analysis_name << "    RestFrames::AnalyzeEvent ERROR (" << __LINE__ << ")    Unable to analyze event from lab frame. Exiting." << endl;
+                exit(1);
+            }
+
+            cN_ISR = cVIS.GetNElementsInFrame(cISR);
+            cN_V   = cVIS.GetNElementsInFrame(cV);
+            cNj_ISR = 0;
+            cNj_V = 0;
+            cNb_ISR = 0;
+            cNb_V = 0;
+
+
+            int nS = sjetID.size();
+            for(int i = 0; i < nS; i++) {
+                if(cVIS.GetFrame(sjetID[i]) == cISR) {
+                    cNj_ISR++;
+                }
+                else if(cVIS.GetFrame(sjetID[i]) == cV) {
+                    cNj_V++;
+                }
+            }
+            int nB = bjetID.size();
+            for(int i = 0; i < nB; i++) {
+                if(cVIS.GetFrame(bjetID[i]) == cISR) {
+                    cNb_ISR++;
+                }
+                else if(cVIS.GetFrame(bjetID[i]) == cV) {
+                    cNb_V++;
+                }
+            }
+
+            TVector3 vP_ISR = cISR.GetFourVector(cCM).Vect();
+            TVector3 vP_S = cS.GetFourVector(cCM).Vect();
+            TVector3 vP_I   = cI.GetFourVector(cCM).Vect();
+
+            cpT_ISR = vP_ISR.Mag();
+            cpT_S = vP_S.Mag();
+            cpT_I = vP_I.Mag();
+            cR_ISR = fabs(vP_I.Dot(vP_ISR.Unit())) / cpT_ISR;
+            cR_ISR_S = fabs(vP_I.Dot(vP_S.Unit())) / cpT_S;
+
+            cCosS = cS.GetCosDecayAngle(); // decay angle relative to cINVLL decay
+            cCosS_I = cS.GetCosDecayAngle(cI); // decay angle relative to the invisible system (a la two-body decay to cINV and cLL)
+
+            cMS = cS.GetMass();
+            cMV = cV.GetMass();
+            cMISR = cISR.GetMass();
+        } // sjets >= 2 && bjest >= 1
+
+    }; // RESTFRAMES -- COMPRESSED [END]
+
+    *cutflow << NewVar("cN_ISR -- number of visible objects in the cISR frame"); {
+        *cutflow << HFTname("cN_ISR");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            int out = -1;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cN_ISR;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cN_V -- number of visible objects in the cV frame"); {
+        *cutflow << HFTname("cN_V");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            int out = -1;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cN_V;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cNj_ISR -- number of sjets in the cISR frame"); {
+        *cutflow << HFTname("cNj_ISR");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            int out = -1;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cNj_ISR;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cNj_V -- number of sjets in the cV frame"); {
+        *cutflow << HFTname("cNj_V");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            int out = -1;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cNj_V;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cNb_ISR -- number of bjets in the cISR frame"); {
+        *cutflow << HFTname("cNb_ISR");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            int out = -1;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cNb_ISR;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cNb_V -- number of bjets in the cV frame"); {
+        *cutflow << HFTname("cNb_V");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            int out = -1;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cNb_V;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cpT_ISR -- pT of cISR frame in the cCM restframe"); {
+        *cutflow << HFTname("cpT_ISR");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -10.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cpT_ISR;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cpT_I -- pT of cI frame in the cCM restframe"); {
+        *cutflow << HFTname("cpT_I");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -10.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cpT_I;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cpT_S -- pT of cS frame in the cCM restframe"); {
+        *cutflow << HFTname("cpT_S");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -10.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cpT_S;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cR_ISR -- ratio of inv. system momentum to ISR momentum"); {
+        *cutflow << HFTname("cR_ISR");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -5.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cR_ISR;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cR_ISR_S -- ratio of inv. system momtnum to S momentum"); {
+        *cutflow << HFTname("cR_ISR_S");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -5.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cR_ISR_S;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cCosS -- cosine of decay of cS relative to the cINVLL decay frame"); {
+        *cutflow << HFTname("cCosS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -5.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cCosS;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cCosS_I -- cosine of decay of cS relative to the cI frame"); {
+        *cutflow << HFTname("cCosS_I");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -5.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cCosS_I;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cMS -- mass of the sparticle decay system cS"); {
+        *cutflow << HFTname("cMS");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -10.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cMS;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cMV -- mass of the cV system"); {
+        *cutflow << HFTname("cMV");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -10.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cMV;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("cMISR -- mass of the cISR system"); {
+        *cutflow << HFTname("cMISR");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -10.;
+            if(sjets.size()>=2 && bjets.size()>=1) {
+                out = cMISR;
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+*/
 
 
 
