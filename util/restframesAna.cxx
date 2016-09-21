@@ -114,6 +114,10 @@ int main(int argc, char* argv[])
         return (sl->tools->passTileErr(cutflags));
     };
     
+    *cutflow << CutName("SCT error") << [&](Superlink* sl) -> bool {
+        return (sl->tools->passSCTErr(cutflags));
+    };
+
     *cutflow << CutName("TTC veto") << [&](Superlink* sl) -> bool {
         return (sl->tools->passTTC(cutflags));
     };

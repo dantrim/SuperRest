@@ -107,6 +107,9 @@ int main(int argc, char* argv[])
     *cutflow << CutName("Tile Error") << [&](Superlink* sl) -> bool {
         return (sl->tools->passTileErr(cutflags));
     };
+    *cutflow << CutName("SCT error") << [&](Superlink* sl) -> bool {
+        return (sl->tools->passSCTErr(cutflags));
+    };
     *cutflow << CutName("TTC veto") << [&](Superlink* sl) -> bool {
         return (sl->tools->passTTC(cutflags));
     };
@@ -160,13 +163,20 @@ int main(int argc, char* argv[])
     bool pass_mu20_mu8noL1;
     bool pass_e17_lhloose_mu14;
     bool pass_2e12_lhloose_L12EM10VH;
-    bool pass_2e15_lhloose_L12EM13VH;
+    bool pass_2e15_lhvloose_L12EM13VH;
+    // updated
+    bool pass_2e17_lhvloose_nod0;
+    bool pass_mu22_mu8noL1;
+    bool pass_e17_lhloose_nod0_mu14;
     *cutflow << [&](Superlink* sl, var_void*) {
         pass_mu18_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu18_mu8noL1");
         pass_mu20_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu20_mu8noL1");
         pass_e17_lhloose_mu14 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e17_lhloose_mu14");
         pass_2e12_lhloose_L12EM10VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e12_lhloose_L12EM10VH");
-        pass_2e15_lhloose_L12EM13VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e15_lhloose_L12EM13VH");
+        pass_2e15_lhvloose_L12EM13VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e15_lhvloose_L12EM13VH");
+        pass_2e17_lhvloose_nod0 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e17_lhvloose_nod0");
+        pass_mu22_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu22_mu8noL1");
+        pass_e17_lhloose_nod0_mu14 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e17_lhloose_nod0_mu14"); 
     };
     *cutflow << NewVar("pass mu18_mu8noL1"); {
         *cutflow << HFTname("trig_mu18_mu8noL1");
@@ -196,10 +206,10 @@ int main(int argc, char* argv[])
         };
         *cutflow << SaveVar();
     }
-    *cutflow << NewVar("pass 2e15_lhloose_L12EM13VH"); {
-        *cutflow << HFTname("trig_2e15_lhloose_L12EM13VH");
+    *cutflow << NewVar("pass 2e15_lhvloose_L12EM13VH"); {
+        *cutflow << HFTname("trig_2e15_lhvloose_L12EM13VH");
         *cutflow << [&](Superlink* sl, var_bool*) -> bool {
-            return pass_2e15_lhloose_L12EM13VH;
+            return pass_2e15_lhvloose_L12EM13VH;
         };
         *cutflow << SaveVar();
     }
@@ -213,7 +223,45 @@ int main(int argc, char* argv[])
     *cutflow << NewVar("pass OR 2016 trigger set"); {
         *cutflow << HFTname("trig_pass2016");
         *cutflow << [&](Superlink* sl, var_bool*) -> bool {
-            return (pass_mu20_mu8noL1 || pass_e17_lhloose_mu14 || pass_2e15_lhloose_L12EM13VH);
+            return (pass_mu20_mu8noL1 || pass_e17_lhloose_mu14 || pass_2e15_lhvloose_L12EM13VH);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("pass HLT_2e17_lhvloose_nod0"); {
+        *cutflow << HFTname("trig_2e17_lhvloose_nod0");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return pass_2e17_lhvloose_nod0;
+        };
+        *cutflow << SaveVar();
+    } 
+    *cutflow << NewVar("pass mu22_mu8noL1"); {
+        *cutflow << HFTname("trig_mu22_mu8noL1");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return pass_mu22_mu8noL1;
+        };
+        *cutflow << SaveVar();
+    } 
+    *cutflow << NewVar("pass HLT_e17_lhloose_nod0_mu14"); {
+        *cutflow << HFTname("trig_e17_lhloose_nod0_mu14");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return pass_e17_lhloose_nod0_mu14;
+        };
+        *cutflow << SaveVar();
+    } 
+    *cutflow << NewVar("pass OR UPDATED trigger set"); {
+        *cutflow << HFTname("trig_pass2016update");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return (pass_2e17_lhvloose_nod0 || pass_mu22_mu8noL1 || pass_e17_lhloose_nod0_mu14); 
+        };
+        *cutflow << SaveVar();
+    }
+        
+
+    *cutflow << NewVar("year (either 2015 or 2016 for data)"); {
+        *cutflow << HFTname("year");
+        *cutflow << [&](Superlink* sl, var_int*) -> int { 
+            return sl->nt->evt()->treatAsYear;
         };
         *cutflow << SaveVar();
     }
@@ -1467,830 +1515,830 @@ int main(int argc, char* argv[])
         };
         *cutflow << SaveVar();
     }
-
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-    //
-    // RESTFRAMES - 2 jets, 2 leptons
-    // RESTFRAMES - 2 jets, 2 leptons
-    // RESTFRAMES - 2 jets, 2 leptons
-    // RESTFRAMES - 2 jets, 2 leptons
-    //
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-/*
-    double xshat;
-    double xgaminv;
-    double xRPT;
-    double xRPZ;
-    double xcosSS;
-    double xdphiLSS;
-    double xMS;
-    double xPS;
-    double xMSS;
-    double xgaminvSS;
-    double xDeltaBetaSS;
-    double xDPD_vSS;
-    double xDPB_vSS;
-    int xNV[2]; // number of visible objects in hemisphere
-    double xcosS[2]; // cosine stop decay angle
-    double xcosC[2]; // cosine intermediate child decay angle
-    double xdphiSC[2]; // cosine between stop and child decay planes
-    double xRCS[2]; // ratio of child and stop masses (w/ WIMP masses subtracted);
-    double xjet1PT[2]; // first leading jet pT associated with this hemisphere
-    double xjet2PT[2]; // second leading jet pT associated with this hemisphere
-    double xPinv[2]; // Pinv / HS
-    double xH_11_SS;
-    double xH_21_SS;
-    double xH_41_SS;
-    double xH_42_SS;
-    double xH_11_S1;
-    double xH_21_S1;
-    double xH_11_SS_T;
-    double xH_21_SS_T;
-    double xH_41_SS_T;
-    double xH_42_SS_T;
-    double xH_11_S1_T;
-    double xH_21_S1_T;
-
-    double xRPT_H_11_SS; 
-    double xRPT_H_21_SS; 
-    double xRPT_H_41_SS; 
-    double xRPT_H_42_SS; 
-    double xRPZ_H_11_SS; 
-    double xRPZ_H_21_SS; 
-    double xRPZ_H_41_SS; 
-    double xRPZ_H_42_SS; 
-    double xRPT_H_11_SS_T; 
-    double xRPT_H_21_SS_T; 
-    double xRPT_H_41_SS_T; 
-    double xRPT_H_42_SS_T; 
-    double xRPZ_H_11_SS_T; 
-    double xRPZ_H_21_SS_T; 
-    double xRPZ_H_41_SS_T; 
-    double xRPZ_H_42_SS_T; 
-
-    double xdphiVS_I[2];
-
-    // feb 1 vars
-    //double xCosP1;
-    //double xCosP2;
-
-
-    *cutflow << [&](Superlink* sl, var_void*) {
-        if(sjets.size()>=2 && bjets.size()>=1) {
-
-            // setup the analysis tree
-            LabRecoFrame xlab("xlab", "xlab");
-            DecayRecoFrame xss("xss", "xss");
-            DecayRecoFrame xs1("xs1", "xs1");
-            DecayRecoFrame xs2("xs2", "xs2");
-            DecayRecoFrame xc1("xc1", "xc1");
-            DecayRecoFrame xc2("xc2", "xc2");
-            VisibleRecoFrame xv1s("xv1s", "xv1s");
-            VisibleRecoFrame xv2s("xv2s", "xv2s");
-            InvisibleRecoFrame xi1("xi1", "xi1");
-            VisibleRecoFrame xv1c("xv1c", "xv1c");
-            VisibleRecoFrame xv2c("xv2c", "xv2c");
-            InvisibleRecoFrame xi2("xi2", "xi2");
-
-            xlab.SetChildFrame(xss);
-            xss.AddChildFrame(xs1);
-            xss.AddChildFrame(xs2);
-            xs1.AddChildFrame(xc1);
-            xs1.AddChildFrame(xv1s);
-            xc1.AddChildFrame(xi1);
-            xc1.AddChildFrame(xv1c);
-            xs2.AddChildFrame(xc2);
-            xs2.AddChildFrame(xv2s);
-            xc2.AddChildFrame(xi2);
-            xc2.AddChildFrame(xv2c);
-
-            // check that the decay tree is connected properly
-            if(!xlab.InitializeTree()) {
-                cout << analysis_name << "    RestFrames::InitializeTree ERROR (" << __LINE__ <<")    Unable to initialize tree from lab frame. Exiting." << endl;
-                exit(1);
-            }
-
-
-            // define groupes
-
-            InvisibleGroup xinv("xinv", "x-invisible gruop jigsaws");
-            xinv.AddFrame(xi1);
-            xinv.AddFrame(xi2);
-
-            CombinatoricGroup xvis("xvis", "x-visible object jigsaws");
-
-            // visible frames in first decay step must always have at least one element
-            xvis.AddFrame(xv1s);
-            xvis.AddFrame(xv2s);
-            xvis.SetNElementsForFrame(xv1s, 1, false);
-            xvis.SetNElementsForFrame(xv2s, 1, false);
-            // visible frames in second decay step can have zero elements
-            xvis.AddFrame(xv1c);
-            xvis.AddFrame(xv2c);
-            xvis.SetNElementsForFrame(xv1c, 0, false);
-            xvis.SetNElementsForFrame(xv2c, 0, false);
-
-            // define jigsaws
-            SetMassInvJigsaw xMinMassJigsaw("xminmass", "x-Invisible system mass jigsaw");
-            xinv.AddJigsaw(xMinMassJigsaw);
-            SetRapidityInvJigsaw xRapidityJigsaw("xRapidity", "x-Invisible system rapidity jigsaw");
-            xinv.AddJigsaw(xRapidityJigsaw);
-            xRapidityJigsaw.AddVisibleFrames((xlab.GetListVisibleFrames()));
-            ContraBoostInvJigsaw xContraBoostJigsaw("xContra", "x-Contraboost invariant jigsaw");
-            xinv.AddJigsaw(xContraBoostJigsaw);
-            xContraBoostJigsaw.AddVisibleFrames((xs1.GetListVisibleFrames()), 0);
-            xContraBoostJigsaw.AddVisibleFrames((xs2.GetListVisibleFrames()), 1);
-            xContraBoostJigsaw.AddInvisibleFrames((xs1.GetListInvisibleFrames()), 0);
-            xContraBoostJigsaw.AddInvisibleFrames((xs2.GetListInvisibleFrames()), 1);
-
-            MinMassesCombJigsaw xHemiJigsaw("xHemi", "x-Minimize m_{V_{1,2}} jigsaw");
-            xvis.AddJigsaw(xHemiJigsaw);
-            xHemiJigsaw.AddFrame(xv1s, 0);
-            xHemiJigsaw.AddFrame(xv2s, 1);
-            xHemiJigsaw.AddFrame(xv1c, 0);
-            xHemiJigsaw.AddFrame(xv2c, 1);
-
-            MinMassesCombJigsaw x1HemiJigsaw("x-1 Hemi", "x-1 Minimize m_{C_{a}} jigsaw");
-            xvis.AddJigsaw(x1HemiJigsaw);
-            x1HemiJigsaw.AddFrame(xv1s, 0);
-            x1HemiJigsaw.AddFrame(xv1c, 1);
-            x1HemiJigsaw.AddFrame(xi1, 1);
-
-            MinMassesCombJigsaw x2HemiJigsaw("x-2 Hemi", "x-2 Minimize m_{C_{b}} jigsaw");
-            xvis.AddJigsaw(x2HemiJigsaw);
-            x2HemiJigsaw.AddFrame(xv2s, 0);
-            x2HemiJigsaw.AddFrame(xv2c, 1);
-            x2HemiJigsaw.AddFrame(xi2, 1);
-
-            // check that the jigsaws are in place
-            if(!xlab.InitializeAnalysis()) {
-                cout << analysis_name << "    RestFrames::InitializeAnalysis ERROR (" << __LINE__ << ")    Unable to initialize analysis from lab frame. Exiting." << endl;
-                exit(1);
-            }
-
-            // clear the event for sho
-            xlab.ClearEvent();
-
-            // set the met
-            TVector3 xmet3vector(sl->met->lv().Px(), sl->met->lv().Py(), sl->met->lv().Pz());
-            xinv.SetLabFrameThreeVector(xmet3vector);
-
-            // set up the jets and leptons
-            //vector<TLorentzVector> xjets;
-            //TLorentzVector l1, l2;
-
-            //l1.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
-            //l2.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
-            //for(int ij = 0; ij < (int)jets.size(); ij++) {
-            //    TLorentzVector xj;
-            //    xj.SetPtEtaPhiM(jets.at(ij)->Pt(), jets.at(ij)->Eta(), jets.at(ij)->Phi(), jets.at(ij)->M());
-            //    xjets.push_back(xj);
-            //}
-
-            //vector<RFKey> jetID;
-            //jetID.push_back(xvis.AddLabFrameFourVector(l1));
-            //jetID.push_back(xvis.AddLabFrameFourVector(l2));
-            //for(int ij = 0; ij < (int)xjets.size(); ij++) {
-            //    jetID.push_back(xvis.AddLabFrameFourVector(xjets.at(ij)));
-            //}
-
-
-            TLorentzVector j1, j2, l1, l2;
-            j1.SetPtEtaPhiM(jets.at(0)->Pt(), jets.at(0)->Eta(), jets.at(0)->Phi(), jets.at(0)->M());
-            j2.SetPtEtaPhiM(jets.at(1)->Pt(), jets.at(1)->Eta(), jets.at(1)->Phi(), jets.at(1)->M());
-            l1.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
-            l2.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Eta(), leptons.at(1)->M());
-
-            vector<RFKey> jetID;
-            jetID.push_back(xvis.AddLabFrameFourVector(j1));
-            jetID.push_back(xvis.AddLabFrameFourVector(j2));
-
-            vector<RFKey> lepID;
-            lepID.push_back(xvis.AddLabFrameFourVector(l1));
-            lepID.push_back(xvis.AddLabFrameFourVector(l2));
-
-
-            // analyze that
-            xlab.AnalyzeEvent();
-
-            DecayRecoFrame* S[2];
-            DecayRecoFrame* C[2];
-            VisibleRecoFrame* VS[2];
-            VisibleRecoFrame* VC[2];
-            InvisibleRecoFrame* I[2];
-            //randomize
-            int flip = (gRandom->Rndm() > 0.5);
-            S[flip] = &xs1;
-            S[(flip+1)%2] = &xs2;
-            C[flip] = &xc1;
-            C[(flip+1)%2] = &xc2;
-            VS[flip] = &xv1s;
-            VS[(flip+1)%2] = &xv2s;
-            VC[flip] = &xv1c;
-            VC[(flip+1)%2] = &xv2c;
-            I[flip] = &xi1;
-            I[(flip+1)%2] = &xi2;
-
-
-            //////////////////////////////////////
-            // Observables
-            //////////////////////////////////////
-
-
-            // total CM mass
-            xshat = xss.GetMass();
-            // 'mass-less' stop assumption gamma in CM frame
-            xgaminv = xss.GetVisibleShape();
-
-            TVector3 xvPSS = xss.GetFourVector(xlab).Vect();
-
-            // ratio of CM pT to CM mass
-            xRPT = xvPSS.Pt() / (xvPSS.Pt() + xshat/4.);
-            // ratio of CM pz to CM mass
-            xRPZ = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xshat/4.);
-            // cos decay angle of ss system
-            xcosSS = xss.GetCosDecayAngle();
-            // delta phi between lab and SS decay planes
-            xdphiLSS = xlab.GetDeltaPhiDecayPlanes(xss);
-
-
-            TLorentzVector vVS1 = S[0]->GetVisibleFourVector(*S[0]);
-            TLorentzVector vVS2 = S[1]->GetVisibleFourVector(*S[1]);
-
-            // stop mass
-            xMS = (vVS1.M2() - vVS2.M2()) / (2.*(vVS1.E() - vVS2.E()));
-
-            xPS = S[0]->GetMomentum(xss);
-            xMSS = 2.*sqrt(xPS*xPS + xMS*xMS);
-            xgaminvSS = 2.*xMS/xMSS;
-            double beta = sqrt(1.-xgaminv*xgaminv);
-            double betaSS = sqrt(1.-xgaminvSS*xgaminvSS);
-
-            // velocity difference between 'massive' and 'mass-less'
-            xDeltaBetaSS = -(betaSS-beta)/(1.-betaSS*beta);
-
-            // dleta phi between SS visible decay products and SS decay axis
-            xDPD_vSS = xss.GetDeltaPhiDecayVisible();
-            // delta phi between SS visible decay products and SS momentum
-            xDPB_vSS = xss.GetDeltaPhiBoostVisible();
-
-
-            // number of visible objects in hemisphere
-            for(int i = 0; i < 2; i++) {
-                xNV[i] = xvis.GetNElementsInFrame(*VS[i]); 
-                xNV[i] += xvis.GetNElementsInFrame(*VC[i]);
-
-                TVector3 xvP1 = VS[i]->GetFourVector(*S[i]).Vect();
-                TVector3 xvP2 = VC[i]->GetFourVector(*S[i]).Vect();
-                xPinv[i] = 2.*(xvP1+xvP2).Mag()/(xvP1.Mag()+xvP2.Mag() + (xvP1+xvP2).Mag());
-
-                xcosS[i] = S[i]->GetCosDecayAngle();
-
-                int N = jetID.size();
-                double pTmax[2]; pTmax[0] = -1.; pTmax[1] = -1.;
-                for(int j = 0; j < N; j++) {
-                    const RestFrame& frame = xvis.GetFrame(jetID[j]);
-                    if(VS[i]->IsSame(frame) || VC[i]->IsSame(frame)) { // jet is in hemisphere 'i'
-                        double pT_ = xvis.GetLabFrameFourVector(jetID[j]).Pt();
-                        if(pT_ > pTmax[0]) {
-                            pTmax[1] = pTmax[0];
-                            pTmax[0] = pT_;
-                        } else {
-                            if(pT_ > pTmax[1]) pTmax[1] = pT_;
-                        }
-                    }
-                } // j
-
-                xjet1PT[i] = pTmax[0]; // lead visible object pT in hemisphere i
-                xjet2PT[i] = pTmax[1]; // sub lead visible object pT in hemisphere i
-
-                xdphiVS_I[i] = VS[i]->GetFourVector(*S[i]).DeltaPhi(I[i]->GetFourVector(*S[i]));
-
-                if(xNV[i] > 1) {
-                    xcosS[i] = C[i]->GetCosDecayAngle();
-                    xdphiSC[i] = S[i]->GetDeltaPhiDecayPlanes(*C[i]);
-                    xRCS[i] = (C[i]->GetMass() - I[i]->GetMass())/(S[i]->GetMass()-I[i]->GetMass());
-
-                } else {
-                    xcosS[i] = -2;
-                    xdphiSC[i] = -5;
-                    xRCS[i] = -5;
-                }
-                
-            } // i
-
-            ////////////////////////////////////////////////////////////
-            // scale variables
-            ////////////////////////////////////////////////////////////
-
-            TLorentzVector v_v1s_ss = VS[0]->GetFourVector(xss);
-            TLorentzVector v_v2s_ss = VS[1]->GetFourVector(xss);
-            TLorentzVector v_v1c_ss = VC[0]->GetFourVector(xss);
-            TLorentzVector v_v2c_ss = VC[1]->GetFourVector(xss);
-            TLorentzVector v_i1_ss  = I[0]->GetFourVector(xss);
-            TLorentzVector v_i2_ss  = I[1]->GetFourVector(xss);
-            if(v_i1_ss.Vect().Mag() > 1.0e4) {
-                v_i1_ss.SetPtEtaPhiM(0, 0, 0, 0);
-            }
-            if(v_i2_ss.Vect().Mag() > 1.0e4) {
-                v_i2_ss.SetPtEtaPhiM(0, 0, 0, 0);
-            }
-
-            TLorentzVector v_v1s_s1 = VS[0]->GetFourVector(xs1);
-            TLorentzVector v_v1c_s1 = VC[0]->GetFourVector(xs1);
-            TLorentzVector v_i1_s1  = I[0]->GetFourVector(xs1);
-
-            // H_11_SS
-            TVector3 p_vis_H11SS = (v_v1s_ss + v_v2s_ss + v_v1c_ss + v_v2c_ss).Vect();
-            TVector3 p_invis_H11SS = (v_i1_ss + v_i2_ss).Vect();
-            xH_11_SS = p_vis_H11SS.Mag() + p_invis_H11SS.Mag();
-
-            // H_21_SS
-            TVector3 p_vis_1_H21SS = (v_v1s_ss + v_v1c_ss).Vect();
-            TVector3 p_vis_2_H21SS = (v_v2s_ss + v_v2c_ss).Vect();
-            TVector3 p_invis_H21SS = (v_i1_ss + v_i2_ss).Vect();
-            xH_21_SS = p_vis_1_H21SS.Mag() + p_vis_2_H21SS.Mag() + p_invis_H21SS.Mag();
-
-            // H_41_SS
-            xH_41_SS = v_v1s_ss.Vect().Mag() + v_v2s_ss.Vect().Mag() + v_v1c_ss.Vect().Mag() + v_v2c_ss.Vect().Mag() + (v_i1_ss + v_i2_ss).Vect().Mag();
-
-            // H_42_SS
-            xH_42_SS = v_v1s_ss.Vect().Mag() + v_v2s_ss.Vect().Mag() + v_v1c_ss.Vect().Mag() + v_v2c_ss.Vect().Mag() + v_i1_ss.Vect().Mag() + v_i2_ss.Vect().Mag();
-
-            // H_11_S1
-            xH_11_S1 = (v_v1s_s1+v_v1c_s1).Vect().Mag() + v_i1_s1.Vect().Mag();
-
-            // H_21_S1
-            xH_21_S1 = v_v1s_s1.Vect().Mag() + v_v1c_s1.Vect().Mag() + v_i1_s1.Vect().Mag();
-
-            ////////////////
-            // transverse scale variables
-            ////////////////
-            TVector3 tp_v1s_ss = v_v1s_ss.Vect(); tp_v1s_ss.SetZ(0.);
-            TVector3 tp_v2s_ss = v_v2s_ss.Vect(); tp_v2s_ss.SetZ(0.);
-            TVector3 tp_v1c_ss = v_v1c_ss.Vect(); tp_v1c_ss.SetZ(0.);
-            TVector3 tp_v2c_ss = v_v2c_ss.Vect(); tp_v2c_ss.SetZ(0.);
-            TVector3 tp_i1_ss  = v_i1_ss.Vect();  tp_i1_ss.SetZ(0.);
-            TVector3 tp_i2_ss  = v_i2_ss.Vect();  tp_i2_ss.SetZ(0.);
-
-            TVector3 tp_v1s_s1 = v_v1s_s1.Vect(); tp_v1s_s1.SetZ(0.);
-            TVector3 tp_v1c_s1 = v_v1c_s1.Vect(); tp_v1c_s1.SetZ(0.);
-            TVector3 tp_i1_s1  = v_i1_s1.Vect();  tp_i1_s1.SetZ(0.);
-
-            // H_11_SS_T
-            xH_11_SS_T = (tp_v1s_ss + tp_v2s_ss + tp_v1c_ss + tp_v2c_ss).Mag() + (tp_i1_ss + tp_i2_ss).Mag();
-
-            // H_21_SS_T
-            xH_21_SS_T = (tp_v1s_ss + tp_v1c_ss).Mag() + (tp_v2s_ss + tp_v2c_ss).Mag() + (tp_i1_ss + tp_i2_ss).Mag();
-
-            // H_41_SS_T
-            xH_41_SS_T = tp_v1s_ss.Mag() + tp_v2s_ss.Mag() + tp_v1c_ss.Mag() + tp_v2c_ss.Mag() + (tp_i1_ss+tp_i2_ss).Mag();
-
-            // H_42_SS_T
-            xH_42_SS_T = tp_v1s_ss.Mag() + tp_v2s_ss.Mag() + tp_v1c_ss.Mag() + tp_v2c_ss.Mag() + tp_i1_ss.Mag() + tp_i2_ss.Mag();
-
-            // H_11_S1_T
-            xH_11_S1_T = (tp_v1s_s1 + tp_v1c_s1).Mag() + tp_i1_s1.Mag();
-
-            // H_21_S1_T
-            xH_21_S1_T = tp_v1s_s1.Mag() + tp_v1c_s1.Mag() + tp_i1_s1.Mag();
-        
-
-            xRPT_H_11_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_11_SS/4.);
-            xRPT_H_21_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_21_SS/4.);
-            xRPT_H_41_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_41_SS/4.);
-            xRPT_H_42_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_42_SS/4.);
-            xRPZ_H_11_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_11_SS/4.);
-            xRPZ_H_21_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_21_SS/4.);
-            xRPZ_H_41_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_41_SS/4.);
-            xRPZ_H_42_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_42_SS/4.);
-
-            xRPT_H_11_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_11_SS_T/4.);
-            xRPT_H_21_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_21_SS_T/4.);
-            xRPT_H_41_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_41_SS_T/4.);
-            xRPT_H_42_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_42_SS_T/4.);
-            xRPZ_H_11_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_11_SS_T/4.);
-            xRPZ_H_21_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_21_SS_T/4.);
-            xRPZ_H_41_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_41_SS_T/4.);
-            xRPZ_H_42_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_42_SS_T/4.);
-
-
-            ///////////////////////////
-            // feb 1 variables
-            //xCosP1 = S[0]->GetCosDecayAngle(I[0]);
-            //xCosP2 = S[1]->GetCosDecayAngle(I[1]);
-
-        } // njets == 2
-    };
-
-    *cutflow << NewVar("xshat"); {
-        *cutflow << HFTname("xshat");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xshat;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xgaminv"); {
-        *cutflow << HFTname("xgaminv");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xgaminv;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPT"); {
-        *cutflow << HFTname("xRPT");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPT;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPZ"); {
-        *cutflow << HFTname("xRPZ");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPZ;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xcosSS"); {
-        *cutflow << HFTname("xcosSS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xcosSS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xdphiLSS"); {
-        *cutflow << HFTname("xdphiLSS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xdphiLSS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xMS"); {
-        *cutflow << HFTname("xMS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xMS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xPS"); {
-        *cutflow << HFTname("xPS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xPS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xMSS"); {
-        *cutflow << HFTname("xMSS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xMSS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xgaminvSS"); {
-        *cutflow << HFTname("xgaminvSS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xgaminvSS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xDeltaBetaSS"); {
-        *cutflow << HFTname("xDeltaBetaSS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xDeltaBetaSS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xDPD_vSS"); {
-        *cutflow << HFTname("xDPD_vSS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xDPD_vSS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xDPB_vSS"); {
-        *cutflow << HFTname("xDPB_vSS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xDPB_vSS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xNV"); {
-        *cutflow << HFTname("xNV");
-        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-            vector<double> out;
-            out.clear();
-            out.push_back(xNV[0]);
-            out.push_back(xNV[1]);
-            return out;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xNV_0"); {
-        *cutflow << HFTname("xNV_0");
-        *cutflow << [&](Superlink* sl, var_int*) -> int {
-            return xNV[0];
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xNV_1"); {
-        *cutflow << HFTname("xNV_1");
-        *cutflow << [&](Superlink* sl, var_int*) -> int {
-            return xNV[1];
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xcosS"); {
-        *cutflow << HFTname("xcosS");
-        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-            vector<double> out;
-            out.clear();
-            out.push_back(xcosS[0]);
-            out.push_back(xcosS[1]);
-            return out;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xcosC"); {
-        *cutflow << HFTname("xcosC");
-        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-            vector<double> out;
-            out.clear();
-            out.push_back(xcosC[0]);
-            out.push_back(xcosC[1]);
-            return out;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xdphiSC"); {
-        *cutflow << HFTname("xdphiSC");
-        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-            vector<double> out;
-            out.clear();
-            out.push_back(xdphiSC[0]);
-            out.push_back(xdphiSC[1]);
-            return out;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRCS"); {
-        *cutflow << HFTname("xRCS");
-        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-            vector<double> out;
-            out.clear();
-            out.push_back(xRCS[0]);
-            out.push_back(xRCS[1]);
-            return out;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xjet1PT"); {
-        *cutflow << HFTname("xjet1PT");
-        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-            vector<double> out;
-            out.clear();
-            out.push_back(xjet1PT[0]);
-            out.push_back(xjet1PT[1]);
-            return out;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xjet2PT"); {
-        *cutflow << HFTname("xjet2PT");
-        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-            vector<double> out;
-            out.clear();
-            out.push_back(xjet2PT[0]);
-            out.push_back(xjet2PT[1]);
-            return out;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xPinv"); {
-        *cutflow << HFTname("xPinv");
-        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-            vector<double> out;
-            out.clear();
-            out.push_back(xPinv[0]);
-            out.push_back(xPinv[1]);
-            return out;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xH_11_SS"); {
-        *cutflow << HFTname("xH_11_SS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xH_11_SS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xH_21_SS"); {
-        *cutflow << HFTname("xH_21_SS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xH_21_SS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xH_41_SS"); {
-        *cutflow << HFTname("xH_41_SS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xH_41_SS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xH_42_SS"); {
-        *cutflow << HFTname("xH_42_SS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xH_42_SS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xH_11_S1"); {
-        *cutflow << HFTname("xH_11_S1");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xH_11_S1;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xH_21_S1"); {
-        *cutflow << HFTname("xH_21_S1");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xH_21_S1;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xH_11_SS_T"); {
-        *cutflow << HFTname("xH_11_SS_T");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xH_11_SS_T;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xH_21_SS_T"); {
-        *cutflow << HFTname("xH_21_SS_T");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xH_21_SS_T;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xH_41_SS_T"); {
-        *cutflow << HFTname("xH_41_SS_T");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xH_41_SS_T;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xH_42_SS_T"); {
-        *cutflow << HFTname("xH_42_SS_T");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xH_42_SS_T;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xH_11_S1_T"); {
-        *cutflow << HFTname("xH_11_S1_T");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xH_11_S1_T;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xH_21_S1_T"); {
-        *cutflow << HFTname("xH_21_S1_T");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xH_21_S1_T;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPT_H_11_SS"); {
-        *cutflow << HFTname("xRPT_H_11_SS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPT_H_11_SS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPT_H_21_SS"); {
-        *cutflow << HFTname("xRPT_H_21_SS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPT_H_21_SS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPT_H_41_SS"); {
-        *cutflow << HFTname("xRPT_H_41_SS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPT_H_41_SS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPT_H_42_SS"); {
-        *cutflow << HFTname("xRPT_H_42_SS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPT_H_42_SS;
-        };
-        *cutflow << SaveVar();
-    }
-    
-    *cutflow << NewVar("xRPZ_H_11_SS"); {
-        *cutflow << HFTname("xRPZ_H_11_SS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPZ_H_11_SS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPZ_H_21_SS"); {
-        *cutflow << HFTname("xRPZ_H_21_SS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPZ_H_21_SS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPZ_H_41_SS"); {
-        *cutflow << HFTname("xRPZ_H_41_SS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPZ_H_41_SS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPZ_H_42_SS"); {
-        *cutflow << HFTname("xRPZ_H_42_SS");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPZ_H_42_SS;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPT_H_11_SS_T"); {
-        *cutflow << HFTname("xRPT_H_11_SS_T");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPT_H_11_SS_T;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPT_H_21_SS_T"); {
-        *cutflow << HFTname("xRPT_H_21_SS_T");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPT_H_21_SS_T;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPT_H_41_SS_T"); {
-        *cutflow << HFTname("xRPT_H_41_SS_T");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPT_H_41_SS_T;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPT_H_42_SS_T"); {
-        *cutflow << HFTname("xRPT_H_42_SS_T");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPT_H_42_SS_T;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPZ_H_11_SS_T"); {
-        *cutflow << HFTname("xRPZ_H_11_SS_T");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPZ_H_11_SS_T;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPZ_H_21_SS_T"); {
-        *cutflow << HFTname("xRPZ_H_21_SS_T");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPZ_H_21_SS_T;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPZ_H_41_SS_T"); {
-        *cutflow << HFTname("xRPZ_H_41_SS_T");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPZ_H_41_SS_T;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xRPZ_H_42_SS_T"); {
-        *cutflow << HFTname("xRPZ_H_42_SS_T");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            return xRPZ_H_42_SS_T;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("xdphiVS_I"); {
-        *cutflow << HFTname("xdphiVS_I");
-        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
-            vector<double> out;
-            out.clear();
-            out.push_back(xdphiVS_I[0]);
-            out.push_back(xdphiVS_I[1]);
-            return out;
-        };
-        *cutflow << SaveVar();
-    }
-*/
+//
+//    ////////////////////////////////////////////////////////////////////////////
+//    ////////////////////////////////////////////////////////////////////////////
+//    ////////////////////////////////////////////////////////////////////////////
+//    ////////////////////////////////////////////////////////////////////////////
+//    //
+//    // RESTFRAMES - 2 jets, 2 leptons
+//    // RESTFRAMES - 2 jets, 2 leptons
+//    // RESTFRAMES - 2 jets, 2 leptons
+//    // RESTFRAMES - 2 jets, 2 leptons
+//    //
+//    ////////////////////////////////////////////////////////////////////////////
+//    ////////////////////////////////////////////////////////////////////////////
+//    ////////////////////////////////////////////////////////////////////////////
+//    ////////////////////////////////////////////////////////////////////////////
+///*
+//    double xshat;
+//    double xgaminv;
+//    double xRPT;
+//    double xRPZ;
+//    double xcosSS;
+//    double xdphiLSS;
+//    double xMS;
+//    double xPS;
+//    double xMSS;
+//    double xgaminvSS;
+//    double xDeltaBetaSS;
+//    double xDPD_vSS;
+//    double xDPB_vSS;
+//    int xNV[2]; // number of visible objects in hemisphere
+//    double xcosS[2]; // cosine stop decay angle
+//    double xcosC[2]; // cosine intermediate child decay angle
+//    double xdphiSC[2]; // cosine between stop and child decay planes
+//    double xRCS[2]; // ratio of child and stop masses (w/ WIMP masses subtracted);
+//    double xjet1PT[2]; // first leading jet pT associated with this hemisphere
+//    double xjet2PT[2]; // second leading jet pT associated with this hemisphere
+//    double xPinv[2]; // Pinv / HS
+//    double xH_11_SS;
+//    double xH_21_SS;
+//    double xH_41_SS;
+//    double xH_42_SS;
+//    double xH_11_S1;
+//    double xH_21_S1;
+//    double xH_11_SS_T;
+//    double xH_21_SS_T;
+//    double xH_41_SS_T;
+//    double xH_42_SS_T;
+//    double xH_11_S1_T;
+//    double xH_21_S1_T;
+//
+//    double xRPT_H_11_SS; 
+//    double xRPT_H_21_SS; 
+//    double xRPT_H_41_SS; 
+//    double xRPT_H_42_SS; 
+//    double xRPZ_H_11_SS; 
+//    double xRPZ_H_21_SS; 
+//    double xRPZ_H_41_SS; 
+//    double xRPZ_H_42_SS; 
+//    double xRPT_H_11_SS_T; 
+//    double xRPT_H_21_SS_T; 
+//    double xRPT_H_41_SS_T; 
+//    double xRPT_H_42_SS_T; 
+//    double xRPZ_H_11_SS_T; 
+//    double xRPZ_H_21_SS_T; 
+//    double xRPZ_H_41_SS_T; 
+//    double xRPZ_H_42_SS_T; 
+//
+//    double xdphiVS_I[2];
+//
+//    // feb 1 vars
+//    //double xCosP1;
+//    //double xCosP2;
+//
+//
+//    *cutflow << [&](Superlink* sl, var_void*) {
+//        if(sjets.size()>=2 && bjets.size()>=1) {
+//
+//            // setup the analysis tree
+//            LabRecoFrame xlab("xlab", "xlab");
+//            DecayRecoFrame xss("xss", "xss");
+//            DecayRecoFrame xs1("xs1", "xs1");
+//            DecayRecoFrame xs2("xs2", "xs2");
+//            DecayRecoFrame xc1("xc1", "xc1");
+//            DecayRecoFrame xc2("xc2", "xc2");
+//            VisibleRecoFrame xv1s("xv1s", "xv1s");
+//            VisibleRecoFrame xv2s("xv2s", "xv2s");
+//            InvisibleRecoFrame xi1("xi1", "xi1");
+//            VisibleRecoFrame xv1c("xv1c", "xv1c");
+//            VisibleRecoFrame xv2c("xv2c", "xv2c");
+//            InvisibleRecoFrame xi2("xi2", "xi2");
+//
+//            xlab.SetChildFrame(xss);
+//            xss.AddChildFrame(xs1);
+//            xss.AddChildFrame(xs2);
+//            xs1.AddChildFrame(xc1);
+//            xs1.AddChildFrame(xv1s);
+//            xc1.AddChildFrame(xi1);
+//            xc1.AddChildFrame(xv1c);
+//            xs2.AddChildFrame(xc2);
+//            xs2.AddChildFrame(xv2s);
+//            xc2.AddChildFrame(xi2);
+//            xc2.AddChildFrame(xv2c);
+//
+//            // check that the decay tree is connected properly
+//            if(!xlab.InitializeTree()) {
+//                cout << analysis_name << "    RestFrames::InitializeTree ERROR (" << __LINE__ <<")    Unable to initialize tree from lab frame. Exiting." << endl;
+//                exit(1);
+//            }
+//
+//
+//            // define groupes
+//
+//            InvisibleGroup xinv("xinv", "x-invisible gruop jigsaws");
+//            xinv.AddFrame(xi1);
+//            xinv.AddFrame(xi2);
+//
+//            CombinatoricGroup xvis("xvis", "x-visible object jigsaws");
+//
+//            // visible frames in first decay step must always have at least one element
+//            xvis.AddFrame(xv1s);
+//            xvis.AddFrame(xv2s);
+//            xvis.SetNElementsForFrame(xv1s, 1, false);
+//            xvis.SetNElementsForFrame(xv2s, 1, false);
+//            // visible frames in second decay step can have zero elements
+//            xvis.AddFrame(xv1c);
+//            xvis.AddFrame(xv2c);
+//            xvis.SetNElementsForFrame(xv1c, 0, false);
+//            xvis.SetNElementsForFrame(xv2c, 0, false);
+//
+//            // define jigsaws
+//            SetMassInvJigsaw xMinMassJigsaw("xminmass", "x-Invisible system mass jigsaw");
+//            xinv.AddJigsaw(xMinMassJigsaw);
+//            SetRapidityInvJigsaw xRapidityJigsaw("xRapidity", "x-Invisible system rapidity jigsaw");
+//            xinv.AddJigsaw(xRapidityJigsaw);
+//            xRapidityJigsaw.AddVisibleFrames((xlab.GetListVisibleFrames()));
+//            ContraBoostInvJigsaw xContraBoostJigsaw("xContra", "x-Contraboost invariant jigsaw");
+//            xinv.AddJigsaw(xContraBoostJigsaw);
+//            xContraBoostJigsaw.AddVisibleFrames((xs1.GetListVisibleFrames()), 0);
+//            xContraBoostJigsaw.AddVisibleFrames((xs2.GetListVisibleFrames()), 1);
+//            xContraBoostJigsaw.AddInvisibleFrames((xs1.GetListInvisibleFrames()), 0);
+//            xContraBoostJigsaw.AddInvisibleFrames((xs2.GetListInvisibleFrames()), 1);
+//
+//            MinMassesCombJigsaw xHemiJigsaw("xHemi", "x-Minimize m_{V_{1,2}} jigsaw");
+//            xvis.AddJigsaw(xHemiJigsaw);
+//            xHemiJigsaw.AddFrame(xv1s, 0);
+//            xHemiJigsaw.AddFrame(xv2s, 1);
+//            xHemiJigsaw.AddFrame(xv1c, 0);
+//            xHemiJigsaw.AddFrame(xv2c, 1);
+//
+//            MinMassesCombJigsaw x1HemiJigsaw("x-1 Hemi", "x-1 Minimize m_{C_{a}} jigsaw");
+//            xvis.AddJigsaw(x1HemiJigsaw);
+//            x1HemiJigsaw.AddFrame(xv1s, 0);
+//            x1HemiJigsaw.AddFrame(xv1c, 1);
+//            x1HemiJigsaw.AddFrame(xi1, 1);
+//
+//            MinMassesCombJigsaw x2HemiJigsaw("x-2 Hemi", "x-2 Minimize m_{C_{b}} jigsaw");
+//            xvis.AddJigsaw(x2HemiJigsaw);
+//            x2HemiJigsaw.AddFrame(xv2s, 0);
+//            x2HemiJigsaw.AddFrame(xv2c, 1);
+//            x2HemiJigsaw.AddFrame(xi2, 1);
+//
+//            // check that the jigsaws are in place
+//            if(!xlab.InitializeAnalysis()) {
+//                cout << analysis_name << "    RestFrames::InitializeAnalysis ERROR (" << __LINE__ << ")    Unable to initialize analysis from lab frame. Exiting." << endl;
+//                exit(1);
+//            }
+//
+//            // clear the event for sho
+//            xlab.ClearEvent();
+//
+//            // set the met
+//            TVector3 xmet3vector(sl->met->lv().Px(), sl->met->lv().Py(), sl->met->lv().Pz());
+//            xinv.SetLabFrameThreeVector(xmet3vector);
+//
+//            // set up the jets and leptons
+//            //vector<TLorentzVector> xjets;
+//            //TLorentzVector l1, l2;
+//
+//            //l1.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
+//            //l2.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
+//            //for(int ij = 0; ij < (int)jets.size(); ij++) {
+//            //    TLorentzVector xj;
+//            //    xj.SetPtEtaPhiM(jets.at(ij)->Pt(), jets.at(ij)->Eta(), jets.at(ij)->Phi(), jets.at(ij)->M());
+//            //    xjets.push_back(xj);
+//            //}
+//
+//            //vector<RFKey> jetID;
+//            //jetID.push_back(xvis.AddLabFrameFourVector(l1));
+//            //jetID.push_back(xvis.AddLabFrameFourVector(l2));
+//            //for(int ij = 0; ij < (int)xjets.size(); ij++) {
+//            //    jetID.push_back(xvis.AddLabFrameFourVector(xjets.at(ij)));
+//            //}
+//
+//
+//            TLorentzVector j1, j2, l1, l2;
+//            j1.SetPtEtaPhiM(jets.at(0)->Pt(), jets.at(0)->Eta(), jets.at(0)->Phi(), jets.at(0)->M());
+//            j2.SetPtEtaPhiM(jets.at(1)->Pt(), jets.at(1)->Eta(), jets.at(1)->Phi(), jets.at(1)->M());
+//            l1.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
+//            l2.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Eta(), leptons.at(1)->M());
+//
+//            vector<RFKey> jetID;
+//            jetID.push_back(xvis.AddLabFrameFourVector(j1));
+//            jetID.push_back(xvis.AddLabFrameFourVector(j2));
+//
+//            vector<RFKey> lepID;
+//            lepID.push_back(xvis.AddLabFrameFourVector(l1));
+//            lepID.push_back(xvis.AddLabFrameFourVector(l2));
+//
+//
+//            // analyze that
+//            xlab.AnalyzeEvent();
+//
+//            DecayRecoFrame* S[2];
+//            DecayRecoFrame* C[2];
+//            VisibleRecoFrame* VS[2];
+//            VisibleRecoFrame* VC[2];
+//            InvisibleRecoFrame* I[2];
+//            //randomize
+//            int flip = (gRandom->Rndm() > 0.5);
+//            S[flip] = &xs1;
+//            S[(flip+1)%2] = &xs2;
+//            C[flip] = &xc1;
+//            C[(flip+1)%2] = &xc2;
+//            VS[flip] = &xv1s;
+//            VS[(flip+1)%2] = &xv2s;
+//            VC[flip] = &xv1c;
+//            VC[(flip+1)%2] = &xv2c;
+//            I[flip] = &xi1;
+//            I[(flip+1)%2] = &xi2;
+//
+//
+//            //////////////////////////////////////
+//            // Observables
+//            //////////////////////////////////////
+//
+//
+//            // total CM mass
+//            xshat = xss.GetMass();
+//            // 'mass-less' stop assumption gamma in CM frame
+//            xgaminv = xss.GetVisibleShape();
+//
+//            TVector3 xvPSS = xss.GetFourVector(xlab).Vect();
+//
+//            // ratio of CM pT to CM mass
+//            xRPT = xvPSS.Pt() / (xvPSS.Pt() + xshat/4.);
+//            // ratio of CM pz to CM mass
+//            xRPZ = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xshat/4.);
+//            // cos decay angle of ss system
+//            xcosSS = xss.GetCosDecayAngle();
+//            // delta phi between lab and SS decay planes
+//            xdphiLSS = xlab.GetDeltaPhiDecayPlanes(xss);
+//
+//
+//            TLorentzVector vVS1 = S[0]->GetVisibleFourVector(*S[0]);
+//            TLorentzVector vVS2 = S[1]->GetVisibleFourVector(*S[1]);
+//
+//            // stop mass
+//            xMS = (vVS1.M2() - vVS2.M2()) / (2.*(vVS1.E() - vVS2.E()));
+//
+//            xPS = S[0]->GetMomentum(xss);
+//            xMSS = 2.*sqrt(xPS*xPS + xMS*xMS);
+//            xgaminvSS = 2.*xMS/xMSS;
+//            double beta = sqrt(1.-xgaminv*xgaminv);
+//            double betaSS = sqrt(1.-xgaminvSS*xgaminvSS);
+//
+//            // velocity difference between 'massive' and 'mass-less'
+//            xDeltaBetaSS = -(betaSS-beta)/(1.-betaSS*beta);
+//
+//            // dleta phi between SS visible decay products and SS decay axis
+//            xDPD_vSS = xss.GetDeltaPhiDecayVisible();
+//            // delta phi between SS visible decay products and SS momentum
+//            xDPB_vSS = xss.GetDeltaPhiBoostVisible();
+//
+//
+//            // number of visible objects in hemisphere
+//            for(int i = 0; i < 2; i++) {
+//                xNV[i] = xvis.GetNElementsInFrame(*VS[i]); 
+//                xNV[i] += xvis.GetNElementsInFrame(*VC[i]);
+//
+//                TVector3 xvP1 = VS[i]->GetFourVector(*S[i]).Vect();
+//                TVector3 xvP2 = VC[i]->GetFourVector(*S[i]).Vect();
+//                xPinv[i] = 2.*(xvP1+xvP2).Mag()/(xvP1.Mag()+xvP2.Mag() + (xvP1+xvP2).Mag());
+//
+//                xcosS[i] = S[i]->GetCosDecayAngle();
+//
+//                int N = jetID.size();
+//                double pTmax[2]; pTmax[0] = -1.; pTmax[1] = -1.;
+//                for(int j = 0; j < N; j++) {
+//                    const RestFrame& frame = xvis.GetFrame(jetID[j]);
+//                    if(VS[i]->IsSame(frame) || VC[i]->IsSame(frame)) { // jet is in hemisphere 'i'
+//                        double pT_ = xvis.GetLabFrameFourVector(jetID[j]).Pt();
+//                        if(pT_ > pTmax[0]) {
+//                            pTmax[1] = pTmax[0];
+//                            pTmax[0] = pT_;
+//                        } else {
+//                            if(pT_ > pTmax[1]) pTmax[1] = pT_;
+//                        }
+//                    }
+//                } // j
+//
+//                xjet1PT[i] = pTmax[0]; // lead visible object pT in hemisphere i
+//                xjet2PT[i] = pTmax[1]; // sub lead visible object pT in hemisphere i
+//
+//                xdphiVS_I[i] = VS[i]->GetFourVector(*S[i]).DeltaPhi(I[i]->GetFourVector(*S[i]));
+//
+//                if(xNV[i] > 1) {
+//                    xcosS[i] = C[i]->GetCosDecayAngle();
+//                    xdphiSC[i] = S[i]->GetDeltaPhiDecayPlanes(*C[i]);
+//                    xRCS[i] = (C[i]->GetMass() - I[i]->GetMass())/(S[i]->GetMass()-I[i]->GetMass());
+//
+//                } else {
+//                    xcosS[i] = -2;
+//                    xdphiSC[i] = -5;
+//                    xRCS[i] = -5;
+//                }
+//                
+//            } // i
+//
+//            ////////////////////////////////////////////////////////////
+//            // scale variables
+//            ////////////////////////////////////////////////////////////
+//
+//            TLorentzVector v_v1s_ss = VS[0]->GetFourVector(xss);
+//            TLorentzVector v_v2s_ss = VS[1]->GetFourVector(xss);
+//            TLorentzVector v_v1c_ss = VC[0]->GetFourVector(xss);
+//            TLorentzVector v_v2c_ss = VC[1]->GetFourVector(xss);
+//            TLorentzVector v_i1_ss  = I[0]->GetFourVector(xss);
+//            TLorentzVector v_i2_ss  = I[1]->GetFourVector(xss);
+//            if(v_i1_ss.Vect().Mag() > 1.0e4) {
+//                v_i1_ss.SetPtEtaPhiM(0, 0, 0, 0);
+//            }
+//            if(v_i2_ss.Vect().Mag() > 1.0e4) {
+//                v_i2_ss.SetPtEtaPhiM(0, 0, 0, 0);
+//            }
+//
+//            TLorentzVector v_v1s_s1 = VS[0]->GetFourVector(xs1);
+//            TLorentzVector v_v1c_s1 = VC[0]->GetFourVector(xs1);
+//            TLorentzVector v_i1_s1  = I[0]->GetFourVector(xs1);
+//
+//            // H_11_SS
+//            TVector3 p_vis_H11SS = (v_v1s_ss + v_v2s_ss + v_v1c_ss + v_v2c_ss).Vect();
+//            TVector3 p_invis_H11SS = (v_i1_ss + v_i2_ss).Vect();
+//            xH_11_SS = p_vis_H11SS.Mag() + p_invis_H11SS.Mag();
+//
+//            // H_21_SS
+//            TVector3 p_vis_1_H21SS = (v_v1s_ss + v_v1c_ss).Vect();
+//            TVector3 p_vis_2_H21SS = (v_v2s_ss + v_v2c_ss).Vect();
+//            TVector3 p_invis_H21SS = (v_i1_ss + v_i2_ss).Vect();
+//            xH_21_SS = p_vis_1_H21SS.Mag() + p_vis_2_H21SS.Mag() + p_invis_H21SS.Mag();
+//
+//            // H_41_SS
+//            xH_41_SS = v_v1s_ss.Vect().Mag() + v_v2s_ss.Vect().Mag() + v_v1c_ss.Vect().Mag() + v_v2c_ss.Vect().Mag() + (v_i1_ss + v_i2_ss).Vect().Mag();
+//
+//            // H_42_SS
+//            xH_42_SS = v_v1s_ss.Vect().Mag() + v_v2s_ss.Vect().Mag() + v_v1c_ss.Vect().Mag() + v_v2c_ss.Vect().Mag() + v_i1_ss.Vect().Mag() + v_i2_ss.Vect().Mag();
+//
+//            // H_11_S1
+//            xH_11_S1 = (v_v1s_s1+v_v1c_s1).Vect().Mag() + v_i1_s1.Vect().Mag();
+//
+//            // H_21_S1
+//            xH_21_S1 = v_v1s_s1.Vect().Mag() + v_v1c_s1.Vect().Mag() + v_i1_s1.Vect().Mag();
+//
+//            ////////////////
+//            // transverse scale variables
+//            ////////////////
+//            TVector3 tp_v1s_ss = v_v1s_ss.Vect(); tp_v1s_ss.SetZ(0.);
+//            TVector3 tp_v2s_ss = v_v2s_ss.Vect(); tp_v2s_ss.SetZ(0.);
+//            TVector3 tp_v1c_ss = v_v1c_ss.Vect(); tp_v1c_ss.SetZ(0.);
+//            TVector3 tp_v2c_ss = v_v2c_ss.Vect(); tp_v2c_ss.SetZ(0.);
+//            TVector3 tp_i1_ss  = v_i1_ss.Vect();  tp_i1_ss.SetZ(0.);
+//            TVector3 tp_i2_ss  = v_i2_ss.Vect();  tp_i2_ss.SetZ(0.);
+//
+//            TVector3 tp_v1s_s1 = v_v1s_s1.Vect(); tp_v1s_s1.SetZ(0.);
+//            TVector3 tp_v1c_s1 = v_v1c_s1.Vect(); tp_v1c_s1.SetZ(0.);
+//            TVector3 tp_i1_s1  = v_i1_s1.Vect();  tp_i1_s1.SetZ(0.);
+//
+//            // H_11_SS_T
+//            xH_11_SS_T = (tp_v1s_ss + tp_v2s_ss + tp_v1c_ss + tp_v2c_ss).Mag() + (tp_i1_ss + tp_i2_ss).Mag();
+//
+//            // H_21_SS_T
+//            xH_21_SS_T = (tp_v1s_ss + tp_v1c_ss).Mag() + (tp_v2s_ss + tp_v2c_ss).Mag() + (tp_i1_ss + tp_i2_ss).Mag();
+//
+//            // H_41_SS_T
+//            xH_41_SS_T = tp_v1s_ss.Mag() + tp_v2s_ss.Mag() + tp_v1c_ss.Mag() + tp_v2c_ss.Mag() + (tp_i1_ss+tp_i2_ss).Mag();
+//
+//            // H_42_SS_T
+//            xH_42_SS_T = tp_v1s_ss.Mag() + tp_v2s_ss.Mag() + tp_v1c_ss.Mag() + tp_v2c_ss.Mag() + tp_i1_ss.Mag() + tp_i2_ss.Mag();
+//
+//            // H_11_S1_T
+//            xH_11_S1_T = (tp_v1s_s1 + tp_v1c_s1).Mag() + tp_i1_s1.Mag();
+//
+//            // H_21_S1_T
+//            xH_21_S1_T = tp_v1s_s1.Mag() + tp_v1c_s1.Mag() + tp_i1_s1.Mag();
+//        
+//
+//            xRPT_H_11_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_11_SS/4.);
+//            xRPT_H_21_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_21_SS/4.);
+//            xRPT_H_41_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_41_SS/4.);
+//            xRPT_H_42_SS = xvPSS.Pt() / (xvPSS.Pt() + xH_42_SS/4.);
+//            xRPZ_H_11_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_11_SS/4.);
+//            xRPZ_H_21_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_21_SS/4.);
+//            xRPZ_H_41_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_41_SS/4.);
+//            xRPZ_H_42_SS = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_42_SS/4.);
+//
+//            xRPT_H_11_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_11_SS_T/4.);
+//            xRPT_H_21_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_21_SS_T/4.);
+//            xRPT_H_41_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_41_SS_T/4.);
+//            xRPT_H_42_SS_T = xvPSS.Pt() / (xvPSS.Pt() + xH_42_SS_T/4.);
+//            xRPZ_H_11_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_11_SS_T/4.);
+//            xRPZ_H_21_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_21_SS_T/4.);
+//            xRPZ_H_41_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_41_SS_T/4.);
+//            xRPZ_H_42_SS_T = fabs(xvPSS.Pz()) / (fabs(xvPSS.Pz()) + xH_42_SS_T/4.);
+//
+//
+//            ///////////////////////////
+//            // feb 1 variables
+//            //xCosP1 = S[0]->GetCosDecayAngle(I[0]);
+//            //xCosP2 = S[1]->GetCosDecayAngle(I[1]);
+//
+//        } // njets == 2
+//    };
+//
+//    *cutflow << NewVar("xshat"); {
+//        *cutflow << HFTname("xshat");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xshat;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xgaminv"); {
+//        *cutflow << HFTname("xgaminv");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xgaminv;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPT"); {
+//        *cutflow << HFTname("xRPT");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPT;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPZ"); {
+//        *cutflow << HFTname("xRPZ");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPZ;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xcosSS"); {
+//        *cutflow << HFTname("xcosSS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xcosSS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xdphiLSS"); {
+//        *cutflow << HFTname("xdphiLSS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xdphiLSS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xMS"); {
+//        *cutflow << HFTname("xMS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xMS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xPS"); {
+//        *cutflow << HFTname("xPS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xPS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xMSS"); {
+//        *cutflow << HFTname("xMSS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xMSS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xgaminvSS"); {
+//        *cutflow << HFTname("xgaminvSS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xgaminvSS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xDeltaBetaSS"); {
+//        *cutflow << HFTname("xDeltaBetaSS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xDeltaBetaSS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xDPD_vSS"); {
+//        *cutflow << HFTname("xDPD_vSS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xDPD_vSS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xDPB_vSS"); {
+//        *cutflow << HFTname("xDPB_vSS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xDPB_vSS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xNV"); {
+//        *cutflow << HFTname("xNV");
+//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+//            vector<double> out;
+//            out.clear();
+//            out.push_back(xNV[0]);
+//            out.push_back(xNV[1]);
+//            return out;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xNV_0"); {
+//        *cutflow << HFTname("xNV_0");
+//        *cutflow << [&](Superlink* sl, var_int*) -> int {
+//            return xNV[0];
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xNV_1"); {
+//        *cutflow << HFTname("xNV_1");
+//        *cutflow << [&](Superlink* sl, var_int*) -> int {
+//            return xNV[1];
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xcosS"); {
+//        *cutflow << HFTname("xcosS");
+//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+//            vector<double> out;
+//            out.clear();
+//            out.push_back(xcosS[0]);
+//            out.push_back(xcosS[1]);
+//            return out;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xcosC"); {
+//        *cutflow << HFTname("xcosC");
+//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+//            vector<double> out;
+//            out.clear();
+//            out.push_back(xcosC[0]);
+//            out.push_back(xcosC[1]);
+//            return out;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xdphiSC"); {
+//        *cutflow << HFTname("xdphiSC");
+//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+//            vector<double> out;
+//            out.clear();
+//            out.push_back(xdphiSC[0]);
+//            out.push_back(xdphiSC[1]);
+//            return out;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRCS"); {
+//        *cutflow << HFTname("xRCS");
+//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+//            vector<double> out;
+//            out.clear();
+//            out.push_back(xRCS[0]);
+//            out.push_back(xRCS[1]);
+//            return out;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xjet1PT"); {
+//        *cutflow << HFTname("xjet1PT");
+//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+//            vector<double> out;
+//            out.clear();
+//            out.push_back(xjet1PT[0]);
+//            out.push_back(xjet1PT[1]);
+//            return out;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xjet2PT"); {
+//        *cutflow << HFTname("xjet2PT");
+//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+//            vector<double> out;
+//            out.clear();
+//            out.push_back(xjet2PT[0]);
+//            out.push_back(xjet2PT[1]);
+//            return out;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xPinv"); {
+//        *cutflow << HFTname("xPinv");
+//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+//            vector<double> out;
+//            out.clear();
+//            out.push_back(xPinv[0]);
+//            out.push_back(xPinv[1]);
+//            return out;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xH_11_SS"); {
+//        *cutflow << HFTname("xH_11_SS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xH_11_SS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xH_21_SS"); {
+//        *cutflow << HFTname("xH_21_SS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xH_21_SS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xH_41_SS"); {
+//        *cutflow << HFTname("xH_41_SS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xH_41_SS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xH_42_SS"); {
+//        *cutflow << HFTname("xH_42_SS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xH_42_SS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xH_11_S1"); {
+//        *cutflow << HFTname("xH_11_S1");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xH_11_S1;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xH_21_S1"); {
+//        *cutflow << HFTname("xH_21_S1");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xH_21_S1;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xH_11_SS_T"); {
+//        *cutflow << HFTname("xH_11_SS_T");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xH_11_SS_T;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xH_21_SS_T"); {
+//        *cutflow << HFTname("xH_21_SS_T");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xH_21_SS_T;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xH_41_SS_T"); {
+//        *cutflow << HFTname("xH_41_SS_T");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xH_41_SS_T;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xH_42_SS_T"); {
+//        *cutflow << HFTname("xH_42_SS_T");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xH_42_SS_T;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xH_11_S1_T"); {
+//        *cutflow << HFTname("xH_11_S1_T");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xH_11_S1_T;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xH_21_S1_T"); {
+//        *cutflow << HFTname("xH_21_S1_T");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xH_21_S1_T;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPT_H_11_SS"); {
+//        *cutflow << HFTname("xRPT_H_11_SS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPT_H_11_SS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPT_H_21_SS"); {
+//        *cutflow << HFTname("xRPT_H_21_SS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPT_H_21_SS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPT_H_41_SS"); {
+//        *cutflow << HFTname("xRPT_H_41_SS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPT_H_41_SS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPT_H_42_SS"); {
+//        *cutflow << HFTname("xRPT_H_42_SS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPT_H_42_SS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    
+//    *cutflow << NewVar("xRPZ_H_11_SS"); {
+//        *cutflow << HFTname("xRPZ_H_11_SS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPZ_H_11_SS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPZ_H_21_SS"); {
+//        *cutflow << HFTname("xRPZ_H_21_SS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPZ_H_21_SS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPZ_H_41_SS"); {
+//        *cutflow << HFTname("xRPZ_H_41_SS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPZ_H_41_SS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPZ_H_42_SS"); {
+//        *cutflow << HFTname("xRPZ_H_42_SS");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPZ_H_42_SS;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPT_H_11_SS_T"); {
+//        *cutflow << HFTname("xRPT_H_11_SS_T");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPT_H_11_SS_T;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPT_H_21_SS_T"); {
+//        *cutflow << HFTname("xRPT_H_21_SS_T");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPT_H_21_SS_T;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPT_H_41_SS_T"); {
+//        *cutflow << HFTname("xRPT_H_41_SS_T");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPT_H_41_SS_T;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPT_H_42_SS_T"); {
+//        *cutflow << HFTname("xRPT_H_42_SS_T");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPT_H_42_SS_T;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPZ_H_11_SS_T"); {
+//        *cutflow << HFTname("xRPZ_H_11_SS_T");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPZ_H_11_SS_T;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPZ_H_21_SS_T"); {
+//        *cutflow << HFTname("xRPZ_H_21_SS_T");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPZ_H_21_SS_T;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPZ_H_41_SS_T"); {
+//        *cutflow << HFTname("xRPZ_H_41_SS_T");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPZ_H_41_SS_T;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xRPZ_H_42_SS_T"); {
+//        *cutflow << HFTname("xRPZ_H_42_SS_T");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            return xRPZ_H_42_SS_T;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//    *cutflow << NewVar("xdphiVS_I"); {
+//        *cutflow << HFTname("xdphiVS_I");
+//        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+//            vector<double> out;
+//            out.clear();
+//            out.push_back(xdphiVS_I[0]);
+//            out.push_back(xdphiVS_I[1]);
+//            return out;
+//        };
+//        *cutflow << SaveVar();
+//    }
+//*/
 /*
     ////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////

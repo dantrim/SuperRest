@@ -3,26 +3,63 @@ import os
 import sys
 import glob
 import subprocess
+import time
 
-ana_name = "rjigsawAna"
+ana_name = "rjigsawAna_MT"
+#ana_name = "rjigsawAna_MT"
 tar_location = "/data/uclhc/uci/user/dantrim/"
-out_dir = "/data/uclhc/uci/user/dantrim/ntuples/rjigsaw/mc/Raw/"
-log_dir = "/data/uclhc/uci/user/dantrim/ntuples/rjigsaw/mc/logs/"
 
-filelist_dir = "/data/uclhc/uci/user/dantrim/n0216val/filelists/"
-in_job_filelist_dir = "/n0216val/filelists/"
-#samples = ["sherpaVV", "singletop",  "ttbar",  "wjets",  "zjets"]
-#samples = ["data"]
-samples = ["bchargino"]
-#samples = ["bwn"]
-#samples = ["c1c1", "bwn"]
+#n_split = sys.argv[1]
 
-#retry_list = "/data/uclhc/uci/user/dantrim/n0216val/Superflow/run/retry.txt"
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0226/forFake3/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0226/forFake3/logs/"
 
-doBrick = False
-doLocal = True 
-doSDSC  = True 
-doUC    = True 
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0226/jul25/data/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0226/jul25/data/logs/"
+
+out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0226/jul25/mc/Raw/"
+log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0226/jul25/mc/logs/"
+
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0226/jul25/mc/diboson_sf/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0226/jul25/mc/diboson_sf/logs/"
+
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0226/jul25/mc/ttbar/split%s/Raw/"%n_split 
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0226/jul25/mc/ttbar/split%s/logs/"%n_split
+
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0226/jul25/mc/diboson_lvlv/split%s/Raw/"%n_split
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0226/jul25/mc/diboson_lvlv/split%s/logs/"%n_split
+
+
+
+filelist_dir = "/data/uclhc/uci/user/dantrim/n0226val/filelists/"
+in_job_filelist_dir = "/n0226val/filelists/"
+#samples = ['drellyan_sherpa','wjets_sherpa22','zjets_sherpa22','singletop','bwn','ttV','diboson_sherpa_noLVLV']
+#samples = ['n0226_allData']
+#samples = ['n0226_dataToRun']
+#samples = ["diboson_sherpa_lvlv"]
+samples = ["bwn"]
+#samples = ["diboson_sherpa_lvlv", "bwn"]
+#samples = ['drellyan_sherpa']
+#samples = ['diboson_sherpa_lvlv']
+#samples = ['bwn','singletop','ttV','wjets_sherpa22','zjets_sherpa22','diboson_sherpa_noLVLV']
+#samples = ['ttbar_split/split%s'%n_split]
+#samples = ['diboson_lvlv_split/split%s'%n_split]
+
+doBrick = True
+doLocal = False 
+doSDSC  = False 
+doUC    = False 
+
+
+def get_retrylist() :
+    runlist = ["361094", "361096"]
+    retryfile = "/data/uclhc/uci/user/dantrim/n0226val/resub.txt"
+    #lines = open(retryfile).readlines()
+    #for line in lines :
+    #    if not line : continue
+    #    line = line.strip()
+    #    runlist.append(line)
+    return runlist
 
 def main() :
     print "SubmitCondorSF"
@@ -43,6 +80,30 @@ def main() :
         if len(sample_lists) == 0 :
             print "No sample lists in filelist dir!"
             sys.exit()
+
+        #new_lists = []
+        ##get_these = ['280273', '284420', '284484']
+        ##get_these = ['363103','363108','363113']
+        ##get_these = ['410025','410026']
+        ##get_these = ['363102']
+        ##get_these = ['279867']#,'279932','284006']
+        ##get_these = ['363366','363103','363108','363113']
+        #get_these = ['301973']
+        ##get_these = ['361439','361475','361482','387941','410015']
+        #for s_ in sample_lists :
+        #    for blah in get_these :
+        #        if blah in s_ :
+        #            new_lists.append(s_)
+        #sample_lists = new_lists
+        #retry_list = get_retrylist()
+        #new_lists = []
+        #for s_ in sample_lists :
+        #    for x in retry_list :
+        #        if x in s_ :
+        #            new_lists.append(s_)
+        #sample_lists = new_lists
+        
+            
 
         for dataset in sample_lists :
             fullname = str(os.path.abspath(dataset))
@@ -72,14 +133,14 @@ def main() :
             run_cmd += ' %s '%out_dir
             run_cmd += ' %s '%log_dir
             run_cmd += ' %s '%ana_name
-            #run_cmd += ' %s '%(tar_location + "area.tgz")
-            run_cmd += ' n0216val '
+            #run_cmd += ' %s '%(tar_location + "area3.tgz.tgz")
+            run_cmd += ' n0226val '
             run_cmd += ' %s '%dataset
-            run_cmd += ' ' # any extra cmd line optino for Superflow executable
+            run_cmd += ' -a' # any extra cmd line optino for Superflow executable
             run_cmd += '"'
             run_cmd += ' condor_submit submitFile_TEMPLATE.condor '
             lname = dataset.split("/")[-1].replace(".txt", "")
-            run_cmd += ' -append "transfer_input_files = %s" '%(tar_location + "area.tgz")
+            run_cmd += ' -append "transfer_input_files = %s" '%(tar_location + "area3.tgz")
             run_cmd += ' -append "output = %s%s" '%(log_dir, lname + ".out")
             run_cmd += ' -append "log = %s%s" '%(log_dir, lname + ".log")
             run_cmd += ' -append "error = %s%s" '%(log_dir, lname + ".err")
@@ -87,8 +148,10 @@ def main() :
             print run_cmd
             subprocess.call(run_cmd, shell=True)
 
+            #time.sleep(0.5)
+
 def look_for_tarball() :
-    if not os.path.isfile("area.tgz") :
+    if not os.path.isfile("area3.tgz") :
         print "Tarball not found."
         sys.exit()
 
@@ -109,7 +172,7 @@ def look_for_condor_script(brick_ = False, local_ = False, sdsc_ = False, uc_ = 
     f.write('+site_local=%s\n'%local_)
     f.write('+sdsc=%s\n'%sdsc_)
     f.write('+uc=%s\n'%uc_)
-    #f.write('transfer_input_files = area.tgz\n')
+    #f.write('transfer_input_files = area3.tgz.tgz\n')
     f.write('executable = RunCondorSF.sh\n')
     f.write('arguments = $ENV(ARGS)\n')
     f.write('should_transfer_files = YES\n')
@@ -141,8 +204,8 @@ def look_for_condor_executable() :
     f.write('    shift\n')
     f.write('done\n\n')
     f.write('work_dir=${PWD}\n')
-    f.write('echo "untarring area.tgz"\n')
-    f.write('tar -xzf area.tgz\n\n')
+    f.write('echo "untarring area3.tgz"\n')
+    f.write('tar -xzf area3.tgz\n\n')
     f.write('echo "done untarring\n')
     f.write('echo "current directory structure:\n')
     f.write('ls -ltrh\n\n')

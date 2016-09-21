@@ -107,6 +107,9 @@ int main(int argc, char* argv[])
     *cutflow << CutName("Tile Error") << [&](Superlink* sl) -> bool {
         return (sl->tools->passTileErr(cutflags));
     };
+    *cutflow << CutName("SCT error") << [&](Superlink* sl) -> bool {
+        return (sl->tools->passSCTErr(cutflags));
+    };
     *cutflow << CutName("TTC veto") << [&](Superlink* sl) -> bool {
         return (sl->tools->passTTC(cutflags));
     };
@@ -141,23 +144,23 @@ int main(int argc, char* argv[])
     *cutflow << CutName("opposite sign") << [](Superlink* sl) -> bool {
         return ((sl->leptons->at(0)->q * sl->leptons->at(1)->q) < 0);
     };
-//    *cutflow << CutName("isSF") << [&](Superlink* sl) -> bool {
-//        bool isSF = false;
-//        bool zveto = false;
-//        if((sl->leptons->size()==2 && (sl->electrons->size()==2 || sl->muons->size()==2))) isSF = true;
-//        if(isSF) {
-//            double mll = (*sl->leptons->at(0) + *sl->leptons->at(1)).M();
-//            if(fabs(mll-91.2)>10.) zveto = true;
-//        }
-//        if(isSF && zveto) return true;
-//        else { return false; }
-//    };
-//    *cutflow << CutName("isDF") << [&](Superlink* sl) -> bool {
-//        bool isDF = false;
-//        if((sl->leptons->size()==2 && sl->electrons->size()==1 && sl->muons->size()==1)) isDF = true;
-//        if(isDF) return true;
-//        else { return false; }
-//    };
+    //*cutflow << CutName("isSF") << [&](Superlink* sl) -> bool {
+    //    bool isSF = false;
+    //    bool zveto = false;
+    //    if((sl->leptons->size()==2 && (sl->electrons->size()==2 || sl->muons->size()==2))) isSF = true;
+    //    if(isSF) {
+    //        double mll = (*sl->leptons->at(0) + *sl->leptons->at(1)).M();
+    //        if(fabs(mll-91.2)>10.) zveto = true;
+    //    }
+    //    if(isSF && zveto) return true;
+    //    else { return false; }
+    //};
+    //*cutflow << CutName("isDF") << [&](Superlink* sl) -> bool {
+    //    bool isDF = false;
+    //    if((sl->leptons->size()==2 && sl->electrons->size()==1 && sl->muons->size()==1)) isDF = true;
+    //    if(isDF) return true;
+    //    else { return false; }
+    //};
 
     *cutflow << CutName("veto SF Z-window (within 10 GeV)") << [](Superlink* sl) -> bool {
         bool pass = true;
@@ -181,13 +184,20 @@ int main(int argc, char* argv[])
     bool pass_mu20_mu8noL1;
     bool pass_e17_lhloose_mu14;
     bool pass_2e12_lhloose_L12EM10VH;
-    bool pass_2e15_lhloose_L12EM13VH;
+    bool pass_2e15_lhvloose_L12EM13VH;
+    // updated
+    bool pass_2e17_lhvloose_nod0;
+    bool pass_mu22_mu8noL1;
+    bool pass_e17_lhloose_nod0_mu14;
     *cutflow << [&](Superlink* sl, var_void*) {
         pass_mu18_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu18_mu8noL1");
         pass_mu20_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu20_mu8noL1");
         pass_e17_lhloose_mu14 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e17_lhloose_mu14");
         pass_2e12_lhloose_L12EM10VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e12_lhloose_L12EM10VH");
-        pass_2e15_lhloose_L12EM13VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e15_lhloose_L12EM13VH");
+        pass_2e15_lhvloose_L12EM13VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e15_lhvloose_L12EM13VH");
+        pass_2e17_lhvloose_nod0 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e17_lhvloose_nod0");
+        pass_mu22_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu22_mu8noL1");
+        pass_e17_lhloose_nod0_mu14 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e17_lhloose_nod0_mu14"); 
     };
     *cutflow << NewVar("pass mu18_mu8noL1"); {
         *cutflow << HFTname("trig_mu18_mu8noL1");
@@ -217,10 +227,10 @@ int main(int argc, char* argv[])
         };
         *cutflow << SaveVar();
     }
-    *cutflow << NewVar("pass 2e15_lhloose_L12EM13VH"); {
-        *cutflow << HFTname("trig_2e15_lhloose_L12EM13VH");
+    *cutflow << NewVar("pass 2e15_lhvloose_L12EM13VH"); {
+        *cutflow << HFTname("trig_2e15_lhvloose_L12EM13VH");
         *cutflow << [&](Superlink* sl, var_bool*) -> bool {
-            return pass_2e15_lhloose_L12EM13VH;
+            return pass_2e15_lhvloose_L12EM13VH;
         };
         *cutflow << SaveVar();
     }
@@ -234,7 +244,35 @@ int main(int argc, char* argv[])
     *cutflow << NewVar("pass OR 2016 trigger set"); {
         *cutflow << HFTname("trig_pass2016");
         *cutflow << [&](Superlink* sl, var_bool*) -> bool {
-            return (pass_mu20_mu8noL1 || pass_e17_lhloose_mu14 || pass_2e15_lhloose_L12EM13VH);
+            return (pass_mu20_mu8noL1 || pass_e17_lhloose_mu14 || pass_2e15_lhvloose_L12EM13VH);
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("pass HLT_2e17_lhvloose_nod0"); {
+        *cutflow << HFTname("trig_2e17_lhvloose_nod0");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return pass_2e17_lhvloose_nod0;
+        };
+        *cutflow << SaveVar();
+    } 
+    *cutflow << NewVar("pass mu22_mu8noL1"); {
+        *cutflow << HFTname("trig_mu22_mu8noL1");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return pass_mu22_mu8noL1;
+        };
+        *cutflow << SaveVar();
+    } 
+    *cutflow << NewVar("pass HLT_e17_lhloose_nod0_mu14"); {
+        *cutflow << HFTname("trig_e17_lhloose_nod0_mu14");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return pass_e17_lhloose_nod0_mu14;
+        };
+        *cutflow << SaveVar();
+    } 
+    *cutflow << NewVar("pass OR UPDATED trigger set"); {
+        *cutflow << HFTname("trig_pass2016update");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return (pass_2e17_lhvloose_nod0 || pass_mu22_mu8noL1 || pass_e17_lhloose_nod0_mu14); 
         };
         *cutflow << SaveVar();
     }
@@ -243,6 +281,14 @@ int main(int argc, char* argv[])
         *cutflow << HFTname("mcid");
         *cutflow << [&](Superlink* sl, var_int*) -> int {
             return sl->nt->evt()->mcChannel;
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("year (either 2015 or 2016 for data)"); {
+        *cutflow << HFTname("year");
+        *cutflow << [&](Superlink* sl, var_int*) -> int { 
+            return sl->nt->evt()->treatAsYear;
         };
         *cutflow << SaveVar();
     }
@@ -4113,26 +4159,26 @@ int main(int argc, char* argv[])
     }
 
     // met
-    *cutflow << NewSystematic("MET TST Soft-Term resolution (parallel)"); {
-        *cutflow << EventSystematic(NtSys::MET_SoftTrk_ResoPara);
-        *cutflow << TreeName("MET_SoftTrk_ResoPara");
-        *cutflow << SaveSystematic();
-    }
-    *cutflow << NewSystematic("MET TST Soft-Term resolution (perpendicular)"); {
-        *cutflow << EventSystematic(NtSys::MET_SoftTrk_ResoPerp);
-        *cutflow << TreeName("MET_SoftTrk_ResoPerp");
-        *cutflow << SaveSystematic();
-    }
-    *cutflow << NewSystematic("MET TST Soft-Term shift in scale (UP)"); {
-        *cutflow << EventSystematic(NtSys::MET_SoftTrk_ScaleUp);
-        *cutflow << TreeName("MET_SoftTrk_ScaleUp");
-        *cutflow << SaveSystematic();
-    }
-    *cutflow << NewSystematic("MET TST Soft-Term shift in scale (DOWN)"); {
-        *cutflow << EventSystematic(NtSys::MET_SoftTrk_ScaleDown);
-        *cutflow << TreeName("MET_SoftTrk_ScaleDown");
-        *cutflow << SaveSystematic();
-    }
+ //   *cutflow << NewSystematic("MET TST Soft-Term resolution (parallel)"); {
+ //       *cutflow << EventSystematic(NtSys::MET_SoftTrk_ResoPara);
+ //       *cutflow << TreeName("MET_SoftTrk_ResoPara");
+ //       *cutflow << SaveSystematic();
+ //   }
+ //   *cutflow << NewSystematic("MET TST Soft-Term resolution (perpendicular)"); {
+ //       *cutflow << EventSystematic(NtSys::MET_SoftTrk_ResoPerp);
+ //       *cutflow << TreeName("MET_SoftTrk_ResoPerp");
+ //       *cutflow << SaveSystematic();
+ //   }
+ //   *cutflow << NewSystematic("MET TST Soft-Term shift in scale (UP)"); {
+ //       *cutflow << EventSystematic(NtSys::MET_SoftTrk_ScaleUp);
+ //       *cutflow << TreeName("MET_SoftTrk_ScaleUp");
+ //       *cutflow << SaveSystematic();
+ //   }
+ //   *cutflow << NewSystematic("MET TST Soft-Term shift in scale (DOWN)"); {
+ //       *cutflow << EventSystematic(NtSys::MET_SoftTrk_ScaleDown);
+ //       *cutflow << TreeName("MET_SoftTrk_ScaleDown");
+ //       *cutflow << SaveSystematic();
+ //   }
 
 
     ////////////////////////////////////////////////////////////////////////
