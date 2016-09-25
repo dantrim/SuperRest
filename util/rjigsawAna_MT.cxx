@@ -69,6 +69,7 @@ int main(int argc, char* argv[])
     cutflow->setRunMode(run_mode_);
     cutflow->setCountWeights(true);
     cutflow->setChain(chain);
+    //cutflow->setUseSumwFile("/data/uclhc/uci/user/dantrim/n0228val/test_sumw_file.txt");
 
     // initialize trigger
     cutflow->nttools().initTriggerTool(ChainHelper::firstFile(sample_, m_dbg));
@@ -162,16 +163,16 @@ int main(int argc, char* argv[])
     //    else { return false; }
     //};
 
-    *cutflow << CutName("veto SF Z-window (within 10 GeV)") << [](Superlink* sl) -> bool {
-        bool pass = true;
-        bool isSF = false;
-        if((sl->leptons->size()==2 && (sl->electrons->size()==2 || sl->muons->size()==2))) isSF = true;
-        if(isSF) {
-            double mll = (*sl->leptons->at(0) + *sl->leptons->at(1)).M();
-            if( fabs(mll-91.2) < 10. ) pass = false;
-        }
-        return pass;
-    };
+    //*cutflow << CutName("veto SF Z-window (within 10 GeV)") << [](Superlink* sl) -> bool {
+    //    bool pass = true;
+    //    bool isSF = false;
+    //    if((sl->leptons->size()==2 && (sl->electrons->size()==2 || sl->muons->size()==2))) isSF = true;
+    //    if(isSF) {
+    //        double mll = (*sl->leptons->at(0) + *sl->leptons->at(1)).M();
+    //        if( fabs(mll-91.2) < 10. ) pass = false;
+    //    }
+    //    return pass;
+    //};
     
 
     ///////////////////////////////////////////////////
@@ -539,19 +540,19 @@ int main(int argc, char* argv[])
         };
         *cutflow << SaveVar();
     }
- //   *cutflow << NewVar("delta phi between to leptons"); {
- //       *cutflow << HFTname("dphi_ll");
- //       *cutflow << [&](Superlink* sl, var_float*) -> double {
- //           double dphi = -999.0;
- //           if(leptons.size() == 2) {
- //               Lepton l0 = *leptons.at(0);
- //               Lepton l1 = *leptons.at(1);
- //               dphi = l0.DeltaPhi(l1);
- //           }
- //           return dphi;
- //       };
- //       *cutflow << SaveVar();
- //   }
+    *cutflow << NewVar("delta phi between to leptons"); {
+        *cutflow << HFTname("dphi_ll");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double dphi = -999.0;
+            if(leptons.size() == 2) {
+                Lepton l0 = *leptons.at(0);
+                Lepton l1 = *leptons.at(1);
+                dphi = l0.DeltaPhi(l1);
+            }
+            return dphi;
+        };
+        *cutflow << SaveVar();
+    }
     *cutflow << NewVar("delta eta between two leptons"); {
         *cutflow << HFTname("deta_ll");
         *cutflow << [&](Superlink* sl, var_float*) -> double {
@@ -702,86 +703,86 @@ int main(int argc, char* argv[])
             };
         *cutflow << SaveVar();
     }
-//    *cutflow << NewVar("delta phi between dilepton system and leading jet"); {
-//        *cutflow << HFTname("dphi_j0_ll");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -999;
-//            if(jets.size()>0) {
-//                TLorentzVector l0, l1, ll;
-//                l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
-//                l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
-//                ll = l0 + l1;
-//                out = jets.at(0)->DeltaPhi(ll);
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("delta phi between leading lepton and leading sjet"); {
-//        *cutflow << HFTname("dphi_j0_l0");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -999;
-//            if(jets.size()>0) {
-//                out = jets.at(0)->DeltaPhi(*leptons.at(0));
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//
-//    *cutflow << NewVar("delta phi between dilepton system and leading sjet"); {
-//        *cutflow << HFTname("dphi_sj0_ll");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -999;
-//            if(sjets.size()>0) {
-//                TLorentzVector l0, l1, ll;
-//                l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
-//                l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
-//                ll = l0 + l1;
-//                out = sjets.at(0)->DeltaPhi(ll);
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("delta phi between leading lepton and leading sjet"); {
-//        *cutflow << HFTname("dphi_sj0_l0");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -999;
-//            if(sjets.size()>0) {
-//                out = sjets.at(0)->DeltaPhi(*leptons.at(0));
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//
-//    *cutflow << NewVar("delta phi between dilepton system and leading bjet"); {
-//        *cutflow << HFTname("dphi_bj0_ll");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -999;
-//            if(bjets.size()>0) {
-//                TLorentzVector l0, l1, ll;
-//                l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
-//                l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
-//                ll = l0 + l1;
-//                out = bjets.at(0)->DeltaPhi(ll);
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
-//    *cutflow << NewVar("delta phi between leading lepton and leading bjet"); {
-//        *cutflow << HFTname("dphi_bj0_l0");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            double out = -999;
-//            if(bjets.size()>0) {
-//                out = bjets.at(0)->DeltaPhi(*leptons.at(0));
-//            }
-//            return out;
-//        };
-//        *cutflow << SaveVar();
-//    }
+    *cutflow << NewVar("delta phi between dilepton system and leading jet"); {
+        *cutflow << HFTname("dphi_j0_ll");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999;
+            if(jets.size()>0) {
+                TLorentzVector l0, l1, ll;
+                l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
+                l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
+                ll = l0 + l1;
+                out = jets.at(0)->DeltaPhi(ll);
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("delta phi between leading lepton and leading sjet"); {
+        *cutflow << HFTname("dphi_j0_l0");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999;
+            if(jets.size()>0) {
+                out = jets.at(0)->DeltaPhi(*leptons.at(0));
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("delta phi between dilepton system and leading sjet"); {
+        *cutflow << HFTname("dphi_sj0_ll");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999;
+            if(sjets.size()>0) {
+                TLorentzVector l0, l1, ll;
+                l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
+                l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
+                ll = l0 + l1;
+                out = sjets.at(0)->DeltaPhi(ll);
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("delta phi between leading lepton and leading sjet"); {
+        *cutflow << HFTname("dphi_sj0_l0");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999;
+            if(sjets.size()>0) {
+                out = sjets.at(0)->DeltaPhi(*leptons.at(0));
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("delta phi between dilepton system and leading bjet"); {
+        *cutflow << HFTname("dphi_bj0_ll");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999;
+            if(bjets.size()>0) {
+                TLorentzVector l0, l1, ll;
+                l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
+                l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
+                ll = l0 + l1;
+                out = bjets.at(0)->DeltaPhi(ll);
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("delta phi between leading lepton and leading bjet"); {
+        *cutflow << HFTname("dphi_bj0_l0");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999;
+            if(bjets.size()>0) {
+                out = bjets.at(0)->DeltaPhi(*leptons.at(0));
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
     // met variables
     // met variables
     // met variables
@@ -808,17 +809,17 @@ int main(int argc, char* argv[])
 //        *cutflow << SaveVar();
 //    }
 
-//    *cutflow << NewVar("delta phi between dilepton system and met"); {
-//        *cutflow << HFTname("dphi_met_ll");
-//        *cutflow << [&](Superlink* sl, var_float*) -> double {
-//            TLorentzVector l0, l1, ll;
-//            l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
-//            l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
-//            ll = l0 + l1;
-//            return met.lv().DeltaPhi(ll);
-//        };
-//        *cutflow << SaveVar();
-//    }
+    *cutflow << NewVar("delta phi between dilepton system and met"); {
+        *cutflow << HFTname("dphi_met_ll");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            TLorentzVector l0, l1, ll;
+            l0.SetPtEtaPhiM(leptons.at(0)->Pt(), leptons.at(0)->Eta(), leptons.at(0)->Phi(), leptons.at(0)->M());
+            l1.SetPtEtaPhiM(leptons.at(1)->Pt(), leptons.at(1)->Eta(), leptons.at(1)->Phi(), leptons.at(1)->M());
+            ll = l0 + l1;
+            return met.lv().DeltaPhi(ll);
+        };
+        *cutflow << SaveVar();
+    }
 //    *cutflow << NewVar("delta phi between lead lepton and met"); {
 //        *cutflow << HFTname("dphi_met_l0");
 //        *cutflow << [&](Superlink* sl, var_float*) -> double {
