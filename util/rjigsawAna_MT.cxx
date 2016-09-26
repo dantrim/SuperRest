@@ -35,7 +35,7 @@ const string analysis_name = "rjigsawAna_MT";
 ////////////////////////////////////////
 // Function Prototypes
 ////////////////////////////////////////
-void read_options(int argc, char* argv[], TChain* chain, int& n_skip_, int& num_events_, string& sample_, SuperflowRunMode& run_mode_, SusyNtSys& nt_sys_, bool dbg);
+void read_options(int argc, char* argv[], TChain* chain, int& n_skip_, int& num_events_, string& sample_, string& suffix_name_, SuperflowRunMode& run_mode_, SusyNtSys& nt_sys_, bool dbg);
 
 
 ////////////////////////////////////////
@@ -50,13 +50,14 @@ int main(int argc, char* argv[])
     int num_events_ = -1;
     bool m_dbg = false;
     string sample_;
+    string suffix_name_ = "";
     SuperflowRunMode run_mode_ = SuperflowRunMode::nominal;
     SusyNtSys nt_sys_ = NtSys::NOM;
 
     TChain* chain = new TChain("susyNt");
     chain->SetDirectory(0);
 
-    read_options(argc, argv, chain, n_skip_, num_events_, sample_, run_mode_, nt_sys_, m_dbg);
+    read_options(argc, argv, chain, n_skip_, num_events_, sample_, suffix_name_, run_mode_, nt_sys_, m_dbg);
 
     ////////////////////////////////////////////////////
     // Construct and configure the Superflow object
@@ -69,6 +70,8 @@ int main(int argc, char* argv[])
     cutflow->setRunMode(run_mode_);
     cutflow->setCountWeights(true);
     cutflow->setChain(chain);
+    if(suffix_name_!="")
+        cutflow->setFileSuffix(suffix_name_);
     //cutflow->setUseSumwFile("/data/uclhc/uci/user/dantrim/n0228val/test_sumw_file.txt");
 
     // initialize trigger
@@ -4202,7 +4205,7 @@ int main(int argc, char* argv[])
 }
 
 void read_options(int argc, char* argv[], TChain* chain, int& n_skip_, int& num_events_, string& sample_,
-    SuperflowRunMode& run_mode_, SusyNtSys& nt_sys, bool dbg)
+    string& suffix_name_, SuperflowRunMode& run_mode_, SusyNtSys& nt_sys, bool dbg)
 {
     bool nominal_ = false;
     bool nominal_and_weight_sys_ = false;
@@ -4226,6 +4229,9 @@ void read_options(int argc, char* argv[], TChain* chain, int& n_skip_, int& num_
         }
         else if(strcmp(argv[i], "-d") == 0) {
             dbg = true;
+        }
+        else if(strcmp(argv[i], "--suffix") == 0) {
+            suffix_name_ = argv[++i];
         }
         else {
             cout << analysis_name << "    Error (fatal) : Bad arguments." << endl;
@@ -4253,6 +4259,9 @@ void read_options(int argc, char* argv[], TChain* chain, int& n_skip_, int& num_
     if(all_sys_) {
         run_mode_ = SuperflowRunMode::all_syst;
         cout << analysis_name << "    run mode: SuperflowRunMode::all_syst" << endl;
+    }
+    if(suffix_name_!="") {
+        cout << analysis_name << "    Setting output file suffix to: " << suffix_name_ << endl;
     }
 }
 
