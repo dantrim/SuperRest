@@ -74,7 +74,8 @@ int main(int argc, char* argv[])
     if(suffix_name_!="")
         cutflow->setFileSuffix(suffix_name_);
     if(do_sumw_split) {
-        string sumw_file = "/data/uclhc/uci/user/dantrim/n0228val/sumw_file.txt"; 
+        string sumw_file = "./n0229val/sumw_file.txt";
+        //string sumw_file = "/data/uclhc/uci/user/dantrim/n0229val/sumw_file.txt"; 
         cout << analysis_name << "    Reading sumw for sample from file: " << sumw_file << endl; 
         cutflow->setUseSumwFile(sumw_file);
     }
@@ -310,6 +311,16 @@ int main(int argc, char* argv[])
         };
         *cutflow << SaveVar();
     }
+    *cutflow << NewVar("event weight with Sherpa V+Jets weight"); {
+        *cutflow << HFTname("eventweightVJets");
+        *cutflow << [&](Superlink* sl, var_double*) -> double {
+            double weight = sl->weights->product() * sl->nt->evt()->wPileup;
+            if(sl->nt->evt()->isSherpaVjetsSample)
+                weight *= sl->nt->evt()->sherpa22VjetsWeight;
+            return weight;
+        };
+        *cutflow << SaveVar();
+    }
     *cutflow << NewVar("event weight (no pileup)"); {
         *cutflow << HFTname("eventweightNOPUPW");
         *cutflow << [&](Superlink* sl, var_double*) -> double {
@@ -416,6 +427,39 @@ int main(int argc, char* argv[])
             vector<double> out;
             for(int i = 0; i < leptons.size(); i++) {
                 out.push_back(leptons.at(i)->q);
+            }
+            return out;
+            };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("lepton d0"); {
+        *cutflow << HFTname("l_d0");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            for(int i = 0; i < leptons.size(); i++) {
+                out.push_back(leptons.at(i)->d0);
+            }
+            return out;
+            };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("lepton d0sig"); {
+        *cutflow << HFTname("l_d0sig");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            for(int i = 0; i < leptons.size(); i++) {
+                out.push_back(leptons.at(i)->d0sigBSCorr);
+            }
+            return out;
+            };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("lepton z0sinTheta"); {
+        *cutflow << HFTname("l_z0sinTheta");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            for(int i = 0; i < leptons.size(); i++) {
+                out.push_back(leptons.at(i)->z0SinTheta());
             }
             return out;
             };
@@ -948,6 +992,89 @@ int main(int argc, char* argv[])
         *cutflow << SaveVar();
     }
 
+    *cutflow << NewVar("lepton centrality (OS-VBF) - sjets"); {
+        *cutflow << HFTname("lep_centrality_sjet");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999;
+            if(leptons.size()==2 && sjets.size()>=2) {
+                float l_eta1 = leptons.at(0)->Eta();
+                float l_eta2 = leptons.at(1)->Eta();
+                float j_eta1 = sjets.at(0)->Eta();
+                float j_eta2 = sjets.at(1)->Eta();
+
+                float min_l_etas = std::min(l_eta1, l_eta2);
+                float min_j_etas = std::min(j_eta1, j_eta2);
+                float max_l_etas = std::max(l_eta1, l_eta2);
+                float max_j_etas = std::max(j_eta1, j_eta2);
+
+                out = std::min( (min_l_etas - min_j_etas), (max_j_etas - max_l_etas) );
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("lepton centrality (OS-VBF) - jets"); {
+        *cutflow << HFTname("lep_centrality_jet");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            double out = -999;
+            if(leptons.size()==2 && jets.size()>=2) {
+                float l_eta1 = leptons.at(0)->Eta();
+                float l_eta2 = leptons.at(1)->Eta();
+                float j_eta1 = jets.at(0)->Eta();
+                float j_eta2 = jets.at(1)->Eta();
+
+                float min_l_etas = std::min(l_eta1, l_eta2);
+                float min_j_etas = std::min(j_eta1, j_eta2);
+                float max_l_etas = std::max(l_eta1, l_eta2);
+                float max_j_etas = std::max(j_eta1, j_eta2);
+
+                out = std::min( (min_l_etas - min_j_etas), (max_j_etas - max_l_etas) );
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("f_recoil_sjets"); {
+        *cutflow << HFTname("f_recoil_sjet");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            float numerator = 0.0;
+            TVector2 f_num;
+            for(auto& jet : sjets) {
+                if(jet->Pt()>10. && std::abs(jet->Eta())<4.5 && jet->jvt!=-1) {
+                    float jvt = std::abs(jet->jvt); 
+                    TVector2 jet_pt(jvt * jet->Px(), jvt * jet->Py());
+                    f_num += jet_pt;
+                }
+            } // jet
+            numerator = sqrt(f_num.Px()*f_num.Px() + f_num.Py()*f_num.Py());
+            float denom = (*leptons.at(0) + *leptons.at(1)).Pt();
+            return (numerator/denom*1.0);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("f_recoil_jets"); {
+        *cutflow << HFTname("f_recoil_jet");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            float numerator = 0.0;
+            TVector2 f_num;
+            for(auto& jet : jets) {
+                if(jet->Pt()>10. && std::abs(jet->Eta())<4.5 && jet->jvt!=-1) {
+                    float jvt = std::abs(jet->jvt); 
+                    TVector2 jet_pt(jvt * jet->Px(), jvt * jet->Py());
+                    f_num += jet_pt;
+                }
+            } // jet
+            numerator = sqrt(f_num.Px()*f_num.Px() + f_num.Py()*f_num.Py());
+            float denom = (*leptons.at(0) + *leptons.at(1)).Pt();
+            return (numerator/denom*1.0);
+        };
+        *cutflow << SaveVar();
+    }
+
+
+
     //////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////
@@ -1429,26 +1556,6 @@ int main(int argc, char* argv[])
         *cutflow << HFTname("dphiS_I_s1");
         *cutflow << [&](Superlink* sl, var_float*) -> double {
             return dphiS_I_s1;
-        };
-        *cutflow << SaveVar();
-    }
-    *cutflow << NewVar("cosThetaB (WW-like)"); {
-        *cutflow << HFTname("cosThetaB");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            double cosThetaB = -999;
-            if(leptons.size()==2) {
-                TLorentzVector lp, lm;
-                for(int il = 0; il < (int)leptons.size(); il++) {
-                    if(leptons.at(il)->q < 0) lm = *leptons.at(il);
-                    else if(leptons.at(il)->q > 0) lp = *leptons.at(il);
-                } // il
-                TLorentzVector ll = lp+lm;
-                TVector3 boost = ll.BoostVector();
-                lp.Boost(-boost);
-                lm.Boost(-boost);
-                cosThetaB = tanh((lp.Eta()-lm.Eta())/2.);
-            }
-            return cosThetaB;
         };
         *cutflow << SaveVar();
     }
@@ -4164,6 +4271,26 @@ int main(int argc, char* argv[])
     *cutflow << NewSystematic("JES NP set 1 (down)"); {
         *cutflow << EventSystematic(NtSys::JET_GroupedNP_1_DN);
         *cutflow << TreeName("JET_GroupedNP_1_DN");
+        *cutflow << SaveSystematic();
+    }
+    *cutflow << NewSystematic("JES NP set 2 (up)"); {
+        *cutflow << EventSystematic(NtSys::JET_GroupedNP_2_UP);
+        *cutflow << TreeName("JET_GroupedNP_2_UP");
+        *cutflow << SaveSystematic();
+    }
+    *cutflow << NewSystematic("JES NP set 2 (down)"); {
+        *cutflow << EventSystematic(NtSys::JET_GroupedNP_2_DN);
+        *cutflow << TreeName("JET_GroupedNP_2_DN");
+        *cutflow << SaveSystematic();
+    }
+    *cutflow << NewSystematic("JES NP set 3 (up)"); {
+        *cutflow << EventSystematic(NtSys::JET_GroupedNP_3_UP);
+        *cutflow << TreeName("JET_GroupedNP_3_UP");
+        *cutflow << SaveSystematic();
+    }
+    *cutflow << NewSystematic("JES NP set 3 (down)"); {
+        *cutflow << EventSystematic(NtSys::JET_GroupedNP_3_DN);
+        *cutflow << TreeName("JET_GroupedNP_3_DN");
         *cutflow << SaveSystematic();
     }
 
