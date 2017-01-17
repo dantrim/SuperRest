@@ -4227,33 +4227,33 @@ int main(int argc, char* argv[])
     }
     // muon
     *cutflow << NewSystematic("muon ID (UP)"); {
-        *cutflow << EventSystematic(NtSys::MUONS_ID_UP);
-        *cutflow << TreeName("MUONS_ID_UP");
+        *cutflow << EventSystematic(NtSys::MUON_ID_UP);
+        *cutflow << TreeName("MUON_ID_UP");
         *cutflow << SaveSystematic();
     }
     *cutflow << NewSystematic("muon ID (DOWN)"); {
-        *cutflow << EventSystematic(NtSys::MUONS_ID_DN);
-        *cutflow << TreeName("MUONS_ID_DN");
+        *cutflow << EventSystematic(NtSys::MUON_ID_DN);
+        *cutflow << TreeName("MUON_ID_DN");
         *cutflow << SaveSystematic();
     }
     *cutflow << NewSystematic("muon MS (UP)"); {
-        *cutflow << EventSystematic(NtSys::MUONS_MS_UP);
-        *cutflow << TreeName("MUONS_MS_UP");
+        *cutflow << EventSystematic(NtSys::MUON_MS_UP);
+        *cutflow << TreeName("MUON_MS_UP");
         *cutflow << SaveSystematic();
     }
     *cutflow << NewSystematic("muon MS (DOWN)"); {
-        *cutflow << EventSystematic(NtSys::MUONS_MS_DN);
-        *cutflow << TreeName("MUONS_MS_DN");
+        *cutflow << EventSystematic(NtSys::MUON_MS_DN);
+        *cutflow << TreeName("MUON_MS_DN");
         *cutflow << SaveSystematic();
     }
     *cutflow << NewSystematic("muon scale shift (UP)"); {
-        *cutflow << EventSystematic(NtSys::MUONS_SCALE_UP);
-        *cutflow << TreeName("MUONS_SCALE_UP");
+        *cutflow << EventSystematic(NtSys::MUON_SCALE_UP);
+        *cutflow << TreeName("MUON_SCALE_UP");
         *cutflow << SaveSystematic();
     }
     *cutflow << NewSystematic("muon scale shift (DN)"); {
-        *cutflow << EventSystematic(NtSys::MUONS_SCALE_DN);
-        *cutflow << TreeName("MUONS_SCALE_DN");
+        *cutflow << EventSystematic(NtSys::MUON_SCALE_DN);
+        *cutflow << TreeName("MUON_SCALE_DN");
         *cutflow << SaveSystematic();
     }
 

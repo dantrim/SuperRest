@@ -227,11 +227,11 @@ int main(int argc, char* argv[])
         };
         *cutflow << SaveVar();
     }
-    *cutflow << NewVar("leptons pass isoTight"); {
-        *cutflow << HFTname("leps_isoTight");
+    *cutflow << NewVar("leptons pass isoFixedCutTightTrackOnly"); {
+        *cutflow << HFTname("leps_isoFixedCutTightTrackOnly");
         *cutflow << [&](Superlink* sl, var_bool*) -> bool {
-            bool l0_pass = (leptons[0]->isoTight ? true : false);
-            bool l1_pass = (leptons[1]->isoTight ? true : false);
+            bool l0_pass = (leptons[0]->isoFixedCutTightTrackOnly ? true : false);
+            bool l1_pass = (leptons[1]->isoFixedCutTightTrackOnly ? true : false);
             return (l0_pass && l1_pass);
         };
         *cutflow << SaveVar();
