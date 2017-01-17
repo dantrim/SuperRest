@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
     Superflow* cutflow = new Superflow();
     cutflow->setAnaName(analysis_name);
     cutflow->setAnaType(AnalysisType::Ana_Stop2L);
-    cutflow->setLumi(3209); // 3.34/fb
+    cutflow->setLumi(1000); // 1/fb
     cutflow->setSampleName(sample_);
     cutflow->setRunMode(run_mode_);
     cutflow->setCountWeights(true);
@@ -394,6 +394,12 @@ int main(int argc, char* argv[])
         *cutflow << [](Superlink* sl, var_float*) -> double { return sl->nt->evt()->avgMu; };
         *cutflow << SaveVar();
     }
+
+    *cutflow << NewVar("average interactions per b.c. with data scale factor applied"); {
+        *cutflow << HFTname("avgMuDataSF");
+        *cutflow << [](Superlink* sl, var_float*) -> double { return sl->nt->evt()->avgMuDataSF; };
+        *cutflow << SaveVar();
+    } 
 
     // lepton variables
     // lepton variables
