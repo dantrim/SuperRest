@@ -22,10 +22,10 @@ samples = ["higgs"]
 
 samples_to_split = ["410009"]
 
-doBrick = False
-doLocal = True
-doSDSC  = True 
-doUC    = True 
+doBrick = True
+doLocal = False 
+doSDSC  = False  
+doUC    = False  
 
 
 def get_retrylist() :
@@ -90,7 +90,7 @@ def main() :
 
 
         # Superflow run mode
-        run_mode = "-c"
+        run_mode = "-a"
 
         # build the job command
         run_cmd = "ARGS="
@@ -100,7 +100,7 @@ def main() :
         run_cmd += ' %s '%ana_name
         run_cmd += ' n0231val '
         run_cmd += ' %s '%process_group
-        run_cmd += ' %s '%run_mode # put here any extra cmd line options for Superflow executable
+        run_cmd += ' %s'%run_mode # put here any extra cmd line options for Superflow executable
         run_cmd += '"'
         run_cmd += ' condor_submit %s '%script_name
         run_cmd += ' -append "transfer_input_files = %s" '%(tar_location + "area.tgz")
@@ -268,13 +268,14 @@ def build_job_executable(executable_name, process_group, n_samples_in_group) :
     f = open(executable_name, 'w')
     f.write('#!/bin/bash\n\n\n')
     f.write('echo " -------- RunCondorSF %s -------- "\n'%process_group)
-    f.write('processs_no=${1}\n')
+    f.write('process_no=${1}\n')
     f.write('output_dir=${2}\n')
     f.write('log_dir=${3}\n')
     f.write('sflow_exec=${4}\n')
     f.write('stored_dir=${5}\n')
     f.write('group_name=${6}\n')
     f.write('sflow_options=${@:7}\n\n')
+    f.write('echo "    process number      : ${process_no}"\n')
     f.write('echo "    output directory    : ${output_dir}"\n')
     f.write('echo "    log directory       : ${log_dir}"\n')
     f.write('echo "    sflow executable    : ${sflow_exec}"\n')
@@ -292,29 +293,39 @@ def build_job_executable(executable_name, process_group, n_samples_in_group) :
     f.write('ls -ltrh\n\n')
     f.write('export ATLAS_LOCAL_ROOT_BASE=/cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase\n')
     f.write('source ${ATLAS_LOCAL_ROOT_BASE}/user/atlasLocalSetup.sh\n')
-    f.write('echo "Calling : cd ${stored_dir}"\n')
+    f.write('echo " > calling : cd ${stored_dir}"\n')
     f.write('cd ${stored_dir}\n')
     f.write('echo "Directory structure:"\n')
     f.write('ls -ltrh\n')
     f.write('lsetup fax\n')
     f.write('source susynt-read/bash/setup_root.sh\n')
-    f.write('echo "Calling : source RootCore/local_setup.sh"\n')
+    f.write('echo " > calling : source RootCore/local_setup.sh"\n')
     f.write('source RootCore/local_setup.sh\n')
     f.write('ls ./filelists/${group_name} > joblist_${group_name}.txt\n')
     f.write('echo "Built in-job filelist for group ${group_name}:"\n')
     f.write('cat joblist_${group_name}.txt\n')
-    f.write('input_list_for_process="./SuperRest/run/GetFileList.py ${group_name} ${process_no}"\n')
+    f.write('echo " > calling : python ./SuperRest/run/GetFileList.py ${group_name} ${process_no} > injob_filelist_${group_name}_${process_no}.txt"\n')
+    f.write('python ./SuperRest/run/GetFileList.py ${group_name} ${process_no} > injob_filelist_${group_name}_${process_no}.txt\n')
+    f.write('ls -ltrh\n')
+    f.write('input_list_for_process=$(head -1 injob_filelist_${group_name}_${process_no}.txt)\n')
+    f.write('echo "input_list_for_process : ${input_list_for_process}"\n')
+
     f.write('input_list_for_process="./${stored_dir}$input_list_for_process"\n')
     f.write('echo "Found input for group: ${group_name} and process no: ${process_no}"\n')
     f.write('echo "  > ${input_list_for_process}"\n\n')
-    f.write('log_for_process="./SuperRest/run/GetJobLogName.py ${input_list_for_process}"\n')
-    f.write('echo "  > Run log: ${log_for_process}"\n')
-    f.write('echo "Calling : cd SuperRest/"\n')
+
+    f.write('echo " > calling : python ./SuperRest/run/GetJobLogName.py ${input_list_for_process} > injob_log_${group_name}_${process_no}.txt"\n')
+    f.write('python ./SuperRest/run/GetJobLogName.py ${input_list_for_process} ${process_no} > injob_log_${group_name}_${process_no}.txt\n') 
+    f.write('ls -ltrh\n')
+
+    f.write('log_for_process=$(head -1 injob_log_${group_name}_${process_no}.txt)\n') 
+    f.write('echo "Setting log to: ${log_for_process}"\n')
     f.write('cd SuperRest/\n')
     f.write('source setRestFrames.sh\n')
-    f.write('echo "Calling : cd ${work_dir}"\n')
+    f.write('echo " > calling : cd ${work_dir}"\n')
     f.write('cd ${work_dir}\n')
-    f.write('echo "Calling : ${sflow_exec} -i ${input_list_for_process} ${sflow_options} 2>&1 |tee ${log_for_process}"\n')
+    f.write('ls -ltrh\n')
+    f.write('echo " > calling : ${sflow_exec} -i ${input_list_for_process} ${sflow_options} 2>&1 |tee ${log_for_process}"\n')
     f.write('${sflow_exec} -i ${input_list_for_process} ${sflow_options} 2>&1 |tee ${log_for_process}\n')
     f.write('echo "final directory structure:"\n')
     f.write('ls -ltrh\n')
