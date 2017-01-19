@@ -16,8 +16,8 @@ log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0231/test_queue/logs/"
 filelist_dir = "/data/uclhc/uci/user/dantrim/n0231val/filelists/"
 in_job_filelist_dir = "/n0231val/filelists/"
 #samples = ["data16"]
-#samples = ["diboson_sherpa_lvlv", "higgs"]
-samples = ["higgs"]
+samples = ["diboson_sherpa_lvlv"] #, "higgs"]
+#samples = ["higgs"]
 #samples = ["diboson_sherpa_lvlv", "drellyan_sherpa", "wjets_sherpa22", "zjets_sherpa22", "ttV", "singletop"]
 
 samples_to_split = ["410009"]
@@ -50,14 +50,6 @@ def get_retrylist() :
 
 def main() :
     print "SubmitCondorSF"
-
-    ### retry [begin]
-    #retry_lines = open(retry_list).readlines()
-    
-
-#    look_for_tarball()
-    #look_for_condor_script(brick_ = doBrick, local_ = doLocal, sdsc_ = doSDSC, uc_ = doUC)
-    #look_for_condor_executable()
 
     for s in samples[:1] :
         print "Submtting sample : %s"%s
@@ -111,8 +103,6 @@ def main() :
 
         print run_cmd
         subprocess.call(run_cmd, shell=True)
-
-        
 
 
 #        for dataset in sample_lists :
@@ -233,37 +223,6 @@ def build_condor_script(script_name, executable_name, proc_group_name, n_samples
     f.write('queue %d\n'%n_samples_in_group)
     f.close()
 
-
-def look_for_condor_script(brick_ = False, local_ = False, sdsc_ = False, uc_ = False) :
-
-    brick = 'false'
-    local = 'false'
-    sdsc  = 'false'
-    uc    = 'false'
-    if brick_ : brick = 'true'
-    if local_ : local = 'true'
-    if sdsc_  : sdsc = 'true'
-    if uc_    : uc = 'true'
-
-    f = open('submitFile_TEMPLATE.condor', 'w')
-    f.write('universe = vanilla\n')
-    f.write('+local=%s\n'%brick_)
-    f.write('+site_local=%s\n'%local_)
-    f.write('+sdsc=%s\n'%sdsc_)
-    f.write('+uc=%s\n'%uc_)
-    #f.write('transfer_input_files = area.tgz.tgz\n')
-    f.write('executable = RunCondorSF.sh\n')
-    f.write('arguments = $(Process) $ENV(ARGS)\n')
-    #f.write('arguments = $ENV(ARGS)\n')
-    f.write('should_transfer_files = YES\n')
-    f.write('when_to_transfer_output = ON_EXIT\n')
-    #f.write('transfer_output_files = OUTFILE\n')
-    #f.write('transfer_output_remaps = OUTFILE_REMAP\n')
-    f.write('use_x509userproxy = True\n')
-    f.write('notification = Never\n')
-    f.write('queue 178\n')
-    f.close()
-
 def build_job_executable(executable_name, process_group, n_samples_in_group) :
     f = open(executable_name, 'w')
     f.write('#!/bin/bash\n\n\n')
@@ -330,64 +289,6 @@ def build_job_executable(executable_name, process_group, n_samples_in_group) :
     f.write('echo "final directory structure:"\n')
     f.write('ls -ltrh\n')
     f.close()
-    
-
-
-def look_for_condor_executable() :
-    f = open('RunCondorSF.sh', 'w') 
-    f.write('#!/bin/bash\n\n\n')
-    f.write('echo " ------- RunCondorSF -------- "\n')
-    f.write('process_no=${1}\n')
-    f.write('output_dir=${2}\n')
-    f.write('log_dir=${3}\n')
-    f.write('sflow_exec=${4}\n')
-    f.write('stored_dir=${5}\n')
-    f.write('input=${6}\n')
-    f.write('sflow_options=${@:7}\n\n')
-    f.write('echo "    output directory   : ${output_dir}"\n')
-    f.write('echo "    log directory      : ${log_dir}"\n')
-    f.write('echo "    sflow executable   : ${sflow_exec}"\n')
-    f.write('echo "    tarred dir         : ${stored_dir}"\n')
-    f.write('echo "    sample list        : ${input}"\n')
-    f.write('echo "    sflow options      : ${sflow_options}"\n\n')
-    f.write('while (( "$#" )); do\n')
-    f.write('    shift\n')
-    f.write('done\n\n')
-    f.write('work_dir=${PWD}\n')
-    f.write('echo "untarring area.tgz"\n')
-    f.write('tar -xzf area.tgz\n\n')
-    f.write('echo "done untarring\n')
-    f.write('echo "current directory structure:\n')
-    f.write('ls -ltrh\n\n')
-    f.write('export ATLAS_LOCAL_ROOT_BASE=/cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase\n')
-    f.write('source ${ATLAS_LOCAL_ROOT_BASE}/user/atlasLocalSetup.sh\n')
-    f.write('echo "Calling : cd ${stored_dir}"\n')
-    f.write('cd ${stored_dir}\n')
-    f.write('echo "Directory structure:"\n')
-    f.write('ls -ltrh\n')
-    f.write('lsetup fax\n')
-    f.write('source susynt-read/bash/setup_root.sh\n')
-    f.write('echo "Calling : source RootCore/local_setup.sh"\n')
-    f.write('source RootCore/local_setup.sh\n')
-    f.write('cmd="./get_sample.py ${process_no}"\n')
-    f.write('x="$($cmd)"\n')
-    f.write('logcmd="./get_log.py ${x}"\n')
-    f.write('logname="$($logcmd)"\n')
-    f.write('echo "Calling : cd SuperRest/"\n')
-    f.write('cd SuperRest/\n')
-    f.write('source setRestFrames.sh\n')
-    f.write('echo "Calling : cd ${work_dir}"\n')
-    f.write('cd ${work_dir}\n')
-    f.write('echo "Running over sample: ${x}"\n')
-    f.write('echo "Calling : ${sflow_exec} -i ./n0231val/filelists/data_toRun/${x} ${sflow_options} 2>&1 |tee ${logname}"\n')
-    #f.write('echo "Calling : ${sflow_exec} -i ${input} ${sflow_options}"\n')
-    f.write('${sflow_exec} -i ./n0231val/filelists/data_toRun/${x} ${sflow_options} 2>&1 |tee ${logname}\n')
-    #f.write('${sflow_exec} -i ${input} ${sflow_options}\n')
-    f.write('echo "final directory structure:"\n')
-    f.write('ls -ltrh\n')
-    f.close()
-    
-    
 
 
 if __name__=="__main__" :
