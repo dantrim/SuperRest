@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
     if(suffix_name_!="")
         cutflow->setFileSuffix(suffix_name_);
     if(do_sumw_split) {
-        string sumw_file = "./n0229val/sumw_file.txt";
+        string sumw_file = "./n0231val/sumw_file.txt";
         //string sumw_file = "/data/uclhc/uci/user/dantrim/n0229val/sumw_file.txt"; 
         cout << analysis_name << "    Reading sumw for sample from file: " << sumw_file << endl; 
         cutflow->setUseSumwFile(sumw_file);
@@ -154,6 +154,41 @@ int main(int argc, char* argv[])
     *cutflow << CutName("opposite sign") << [](Superlink* sl) -> bool {
         return ((sl->leptons->at(0)->q * sl->leptons->at(1)->q) < 0);
     };
+
+    *cutflow << CutName("mll > 20 GeV") << [](Superlink* sl) -> bool {
+        return ( (*sl->leptons->at(0) + *sl->leptons->at(1)).M() > 20. );
+    };
+
+    //*cutflow << CutName("veto SF Z-window (within 10 GeV)") << [](Superlink* sl) -> bool {
+    //    bool pass = true;
+    //    bool isSF = false;
+    //    if((sl->leptons->size()==2 && (sl->electrons->size()==2 || sl->muons->size()==2))) isSF = true;
+    //    if(isSF) {
+    //        double mll = (*sl->leptons->at(0) + *sl->leptons->at(1)).M();
+    //        if( fabs(mll-91.2) < 10. ) pass = false;
+    //    }
+    //    return pass;
+    //};
+
+    *cutflow << CutName("pass trigger requirement") << [&](Superlink* sl) -> bool {
+        int year = sl->nt->evt()->treatAsYear;
+        bool pass = false;
+
+        bool passes_mu18_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu18_mu8noL1");
+        bool passes_e17_lhloose_mu14 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e17_lhloose_mu14");
+        bool passes_2e12_lhloose_L12EM10VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e12_lhloose_L12EM10VH");
+        bool passes_2e17_lhvloose_nod0 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e17_lhvloose_nod0");
+        bool passes_mu22_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu22_mu8noL1");
+        bool passes_e17_lhloose_nod0_mu14 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e17_lhloose_nod0_mu14");
+
+        bool trig_pass_2015 = (passes_mu18_mu8noL1 || passes_e17_lhloose_mu14 || passes_2e12_lhloose_L12EM10VH);
+        bool trig_pass_2016 = (passes_2e17_lhvloose_nod0 || passes_mu22_mu8noL1 || passes_e17_lhloose_nod0_mu14);
+        if( (year==2015 && trig_pass_2015==1) || (year==2016 && trig_pass_2016==1) ) {
+            pass = true;
+        }
+        return pass;
+    };
+    
     //*cutflow << CutName("isSF") << [&](Superlink* sl) -> bool {
     //    bool isSF = false;
     //    bool zveto = false;
@@ -171,18 +206,6 @@ int main(int argc, char* argv[])
     //    if(isDF) return true;
     //    else { return false; }
     //};
-
-    //*cutflow << CutName("veto SF Z-window (within 10 GeV)") << [](Superlink* sl) -> bool {
-    //    bool pass = true;
-    //    bool isSF = false;
-    //    if((sl->leptons->size()==2 && (sl->electrons->size()==2 || sl->muons->size()==2))) isSF = true;
-    //    if(isSF) {
-    //        double mll = (*sl->leptons->at(0) + *sl->leptons->at(1)).M();
-    //        if( fabs(mll-91.2) < 10. ) pass = false;
-    //    }
-    //    return pass;
-    //};
-    
 
     ///////////////////////////////////////////////////
     // Ntuple Setup
