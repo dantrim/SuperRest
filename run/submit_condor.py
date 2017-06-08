@@ -123,10 +123,6 @@ def build_condor_script(condor_script_name, executable_name, process_group, n_da
     f.write('arguments = $(Process) $ENV(ARGS)\n')
     f.write('should_transfer_files = YES\n')
     f.write('when_to_transfer_output = ON_EXIT\n')
-    
-    #f.write('output = /data/uclhc/uci/user/dantrim/n0232val/SuperRest/run/testing/test_BLAH_$(Process).txt\n')
-    #f.write('transfer_output_files = test_job_output.txt\n')
-    #f.write('transfer_output_remaps = "test_job_output.txt = /data/uclhc/uci/user/dantrim/n0232val/SuperRest/run/testing/test_BLAH.txt"\n') 
     f.write('use_x509userproxy = True\n')
     f.write('notification = Never\n')
     f.write('queue %d\n'%n_datasets)
@@ -202,26 +198,20 @@ def build_job_executable(executable_name, process_group, number_of_samples) :
     f.write('source susynt-read/bash/setup_root.sh\n')
     f.write('source RootCore/local_setup.sh\n')
     f.write('ls ./filelists/${group_name} > joblist_${group_name}.txt\n')
-    #f.write('echo "Built in-job filelist for group ${group_name}:"\n')
     f.write('echo "python ./Superflow/run/get_filelist.py ${group_name} ${process_number} ${split_dsids} ${stored_dir} > injob_filelist_${group_name}_${process_number}.txt"\n')
     f.write('python ./Superflow/run/get_filelist.py ${group_name} ${process_number} ${split_dsids} ${stored_dir} > injob_filelist_${group_name}_${process_number}.txt\n')
     f.write('ls -ltrh\n')
     f.write('input_list_for_process_number=$(head -1 injob_filelist_${group_name}_${process_number}.txt)\n')
     f.write('echo "input list for process : ${input_list_for_process_number}"\n')
-    #f.write('cat ${input_list_for_process_number}\n')
 
     f.write('echo "python ./Superflow/run/get_joblog_name.py ./filelists/${group_name} ${process_number} ${split_dsids} > injob_log_${group_name}_${process_number}.txt"\n')
     f.write('python ./Superflow/run/get_joblog_name.py ./filelists/${group_name} ${process_number} ${split_dsids} > injob_log_${group_name}_${process_number}.txt\n')
-    #f.write('cat injob_log_${group_name}_${process_number}.txt\n')
     f.write('log_for_process=$(head -1 injob_log_${group_name}_${process_number}.txt)\n')
     f.write('split_cmd=""\n')
     f.write('n_lines=$(cat injob_filelist_${group_name}_${process_number}.txt |wc -l)\n')
     f.write('if [ ${n_lines} = "2" ]; then\n')
     f.write('    split_cmd=$(tail -1 injob_filelist_${group_name}_${process_number}.txt)\n')
     f.write('fi\n')
-    #f.write('echo "SPLIT CMD = ${split_cmd}"\n')
-    #f.write('echo "CATTING FILELIST FILE"\n')
-    #f.write('cat injob_filelist_${group_name}_${process_number}.txt\n')
     f.write('echo "Setting log to: ${log_for_process}"\n')
 
     f.write('cd SuperRest/\n')
@@ -232,11 +222,6 @@ def build_job_executable(executable_name, process_group, number_of_samples) :
     f.write('echo "${executable} -i ${input_list_for_process_number} ${superflow_options} ${split_cmd} 2>&1 | tee ${log_for_process}"\n')
     f.write('${executable} -i ${input_list_for_process_number} ${superflow_options} ${split_cmd} 2>&1 | tee ${log_for_process}\n')
 
-    #f.write('echo "HELLO WORLD" > test_job_output.txt\n')
-    #f.write('dd if=/dev/zero of=test_job_output.txt bs=52428800 count=1\n')
-    #f.write('dd if=/dev/zero of=output_file_${group_name}_${process_number}.txt bs=52428800 count=1\n')
-    #f.write('touch output_file_${group_name}_${process_number}.root\n')
-    #f.write('echo "HELLO WORLD" 2>&1 |tee test_job_output.txt\n')
     f.write('ls -ltrh\n')
     
 
@@ -303,14 +288,6 @@ def submit_sample(sample) :
     run_cmd += ' -append "output = %s%s" '%(log_dir, process_group + ".out")
     run_cmd += ' -append "log = %s%s" '%(log_dir, process_group + ".log")
     run_cmd += ' -append "error = %s%s" '%(log_dir, process_group + ".err")
-    #run_cmd += ' -append "transfer_output_files = test_job_output.txt" '
-    #run_cmd += ' -append "tansfer_output_remaps = '
-    #run_cmd += '"test_job_output.txt = '
-    #run_cmd += "/data/uclhc/uci/user/dantrim/n0232val/SuperRest/run/test_BLAH.txt" 
-    #run_cmd += '""'
-    #run_cmd += ' -append "transfer_output_files = test_job_output.txt" '
-    #run_cmd += ' -append "transfer_output_remaps = '
-    #run_cmd += '"test_job_output.txt = /data/uclhc/uci/user/dantrim/n0232val/SuperRest/run/test_BLAH.txt"' 
 
     global debug
 
@@ -338,11 +315,6 @@ def main() :
 
     for s in samples :
         submit_sample(s)
-
-
-    
-
-    
 
 ###############################################################################
 if __name__ == "__main__" :
