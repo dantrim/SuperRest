@@ -1,15 +1,29 @@
 #!/bin/env python
 
+##############################################################################
+#
+# submit_condor
+#
+# a script to submit Superflow-based jobs to the Condor
+# batch system from the UCI 'brick'
+#
+# daniel.joseph.antrim@cern.ch
+# June 2017
+#
+##############################################################################
+
+
 import os
 import sys
 import glob
 import subprocess
 import time
+debug = False
 
 ana_name = "rjigsawAna_WWBB" # name of the executable to be run
-tar_name = "n0232val"
-tar_location = "/data/uclhc/uci/user/dantrim/" # location of tar ball fire to take to job siteo
-superflow_run_mode = "-c -n 10" # superflow run mode
+tar_name = "n0232val" # name of the directory you stored in the tarball
+tar_location = "/data/uclhc/uci/user/dantrim/" # location of tarball file to take to job site
+superflow_run_mode = "-c -n 10" # superflow run mode and options
 
 ###############################################################################
 # output locations
@@ -34,9 +48,10 @@ samples = ["wwbb_test"]
 # sample listting - any samples in this list will have individual jobs per
 # file in its filelist
 # NB be sure you have provided the sumw-file with this DSID's sumw!
-samples_to_split = ["410009"] # ttbar
+#samples_to_split = ["410009"] # ttbar
 #samples_to_split = ["361073","361077","363356"]
-#samples_to_split = []
+samples_to_split = ["342053"]
+
 
 ###############################################################################
 # sites to consider for processing
@@ -130,7 +145,7 @@ def is_split_dataset(ds) :
 
 def build_job_executable(executable_name, process_group, number_of_samples) :
 
-    print "build_jobs_executable process_group : %s, filelist_dir: %s"%(process_group, filelist_dir)
+    #print "build_jobs_executable process_group : %s, filelist_dir: %s"%(process_group, filelist_dir)
     group_list_check = "%s%s/"%(filelist_dir, process_group)
 
     datasets = glob.glob(group_list_check + "*.txt")
@@ -187,28 +202,41 @@ def build_job_executable(executable_name, process_group, number_of_samples) :
     f.write('source susynt-read/bash/setup_root.sh\n')
     f.write('source RootCore/local_setup.sh\n')
     f.write('ls ./filelists/${group_name} > joblist_${group_name}.txt\n')
-    f.write('echo "Built in-job filelist for group ${group_name}:"\n')
-    f.write('echo "python ./Superflow/run/get_filelist.py ${group_name} ${process_number} ${split_dsids} > injob_filelist_${group_name}_${process_number}.txt"\n')
-    f.write('python ./Superflow/run/get_filelist.py ${group_name} ${process_number} ${split_dsids} > injob_filelist_${group_name}_${process_number}.txt\n')
+    #f.write('echo "Built in-job filelist for group ${group_name}:"\n')
+    f.write('echo "python ./Superflow/run/get_filelist.py ${group_name} ${process_number} ${split_dsids} ${stored_dir} > injob_filelist_${group_name}_${process_number}.txt"\n')
+    f.write('python ./Superflow/run/get_filelist.py ${group_name} ${process_number} ${split_dsids} ${stored_dir} > injob_filelist_${group_name}_${process_number}.txt\n')
     f.write('ls -ltrh\n')
     f.write('input_list_for_process_number=$(head -1 injob_filelist_${group_name}_${process_number}.txt)\n')
     f.write('echo "input list for process : ${input_list_for_process_number}"\n')
     #f.write('cat ${input_list_for_process_number}\n')
 
-    f.write('echo "python ./Superflow/run/get_joblog_name.py ./filelists/${group_name} ${process_number} ${split_dsids} > injob_log_${group_name}_${process_no}.txt\n')
+    f.write('echo "python ./Superflow/run/get_joblog_name.py ./filelists/${group_name} ${process_number} ${split_dsids} > injob_log_${group_name}_${process_number}.txt"\n')
+    f.write('python ./Superflow/run/get_joblog_name.py ./filelists/${group_name} ${process_number} ${split_dsids} > injob_log_${group_name}_${process_number}.txt\n')
+    #f.write('cat injob_log_${group_name}_${process_number}.txt\n')
+    f.write('log_for_process=$(head -1 injob_log_${group_name}_${process_number}.txt)\n')
+    f.write('split_cmd=""\n')
+    f.write('n_lines=$(cat injob_filelist_${group_name}_${process_number}.txt |wc -l)\n')
+    f.write('if [ ${n_lines} = "2" ]; then\n')
+    f.write('    split_cmd=$(tail -1 injob_filelist_${group_name}_${process_number}.txt)\n')
+    f.write('fi\n')
+    #f.write('echo "SPLIT CMD = ${split_cmd}"\n')
+    #f.write('echo "CATTING FILELIST FILE"\n')
+    #f.write('cat injob_filelist_${group_name}_${process_number}.txt\n')
+    f.write('echo "Setting log to: ${log_for_process}"\n')
 
     f.write('cd SuperRest/\n')
     f.write('source setRestFrames.sh\n')
     f.write('cd ${work_dir}\n')
-    f.write('cd n0232val/\n')
-    f.write('${executable} -i ${input_list_for_process_number} ${superflow_options} 2>&1 |tee stupid_test_log_$(Process).log\n')
+    f.write('echo "Submitting with input filelist ${input_list_for_process_number}"\n')
+    f.write('echo "Submitting with output log file ${log_for_process}"\n')
+    f.write('echo "${executable} -i ${input_list_for_process_number} ${superflow_options} ${split_cmd} 2>&1 | tee ${log_for_process}"\n')
+    f.write('${executable} -i ${input_list_for_process_number} ${superflow_options} ${split_cmd} 2>&1 | tee ${log_for_process}\n')
 
     #f.write('echo "HELLO WORLD" > test_job_output.txt\n')
     #f.write('dd if=/dev/zero of=test_job_output.txt bs=52428800 count=1\n')
     #f.write('dd if=/dev/zero of=output_file_${group_name}_${process_number}.txt bs=52428800 count=1\n')
     #f.write('touch output_file_${group_name}_${process_number}.root\n')
     #f.write('echo "HELLO WORLD" 2>&1 |tee test_job_output.txt\n')
-    f.write('echo "POST CAT"\n') 
     f.write('ls -ltrh\n')
     
 
@@ -217,6 +245,7 @@ def get_retry_list(sample_list) :
 
 def submit_sample(sample) :
 
+    print 35*"- "
     print "Submitting sample : %s"%sample
 
     suffix = ""
@@ -283,12 +312,25 @@ def submit_sample(sample) :
     #run_cmd += ' -append "transfer_output_remaps = '
     #run_cmd += '"test_job_output.txt = /data/uclhc/uci/user/dantrim/n0232val/SuperRest/run/test_BLAH.txt"' 
 
-    print run_cmd
+    global debug
+
+    if debug :
+        print run_cmd
     subprocess.call(run_cmd, shell=True)
+
+    print "\n"
 
 def main() :
     print 70*"-"
     print " submit_condor \n" 
+
+    global debug
+
+    debug = False
+    if len(sys.argv) >= 2 :
+        if sys.argv[1] == "-d" or sys.argv[1] == "--debug" :
+            debug = True
+    
 
     # check that we are situationally aware
     if not environment_ready() :
