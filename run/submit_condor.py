@@ -39,8 +39,8 @@ in_job_filelist_dir = "/n0232val/filelists/" # name of filelist dir as seen at t
 
 ###############################################################################
 # samples to process - text files located in <filelist_dir>/<sample-name>/*.txt
-samples = ["wwbb_test"]
-#samples = ["ttbar"]
+#samples = ["wwbb_test"]
+samples = ["ttbar", "diboson_sherpa"]
 #samples = ["diboson_sherpa"]
 
 
@@ -48,9 +48,9 @@ samples = ["wwbb_test"]
 # sample listting - any samples in this list will have individual jobs per
 # file in its filelist
 # NB be sure you have provided the sumw-file with this DSID's sumw!
-#samples_to_split = ["410009"] # ttbar
+samples_to_split = ["410009"] # ttbar
 #samples_to_split = ["361073","361077","363356"]
-samples_to_split = ["342053"]
+#samples_to_split = ["342053"]
 
 
 ###############################################################################

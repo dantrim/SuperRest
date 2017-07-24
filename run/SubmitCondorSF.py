@@ -5,33 +5,65 @@ import glob
 import subprocess
 import time
 
-ana_name = "rjigsawAna_MT"
+ana_name = "rjigsawAna_WWBB"
 tar_location = "/data/uclhc/uci/user/dantrim/"
 
 #n_split = sys.argv[1]
 
-out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0228/a_sep21/mc/Raw/"
-log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0228/a_sep21/mc/logs/"
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc/ttbar/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc/ttbar/logs/"
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc/zjets/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc/zjets/logs/"
 
-filelist_dir = "/data/uclhc/uci/user/dantrim/n0228val/filelists/"
-in_job_filelist_dir = "/n0228val/filelists/"
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc/zjets_window/splitfiles/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc/zjets_window/logs/"
+
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc_met_sys/ttbar/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc_met_sys/ttbar/logs/"
+
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/c_apr27/mc/ttbar/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/c_apr27/mc/ttbar/logs/"
+
+out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/f_jun5/mc/ttbar/Raw/"
+log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/f_jun5/mc/ttbar/logs/"
+
+out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/g_jun23/mc/ttbar/Raw/"
+log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/g_jun23/mc/ttbar/logs/"
+
+out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/g_jun23/mc_with_b/Raw/"
+log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/g_jun23/mc_with_b/logs/"
+
+out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/h_jun26/mc/ttbar/Raw/"
+log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/h_jun26/mc/ttbar/logs/"
+
+
+filelist_dir = "/data/uclhc/uci/user/dantrim/n0232val/filelists/"
+in_job_filelist_dir = "/n0232val/filelists/"
 #samples = ["diboson_sherpa_lvlv", "drellyan_sherpa", "wjets_sherpa22", "zjets_sherpa22", "ttV", "singletop"]
+#samples = ["ttbar_min"]
+#samples = ["Wt"]#, "wwbb_susy2"]
 samples = ["ttbar"]
-#samples = ["data16_n0228"] #, "data16_n0228"]
-#samples = ["data16_n0228"]
+#samples = ["zjets_and_DY"]
+#samples = ["higgs"]
+#samples = ["data16_n0232"] #, "data16_n0232"]
+#samples = ["data16_n0232"]
 
 samples_to_split = ["410009"]
+#samples_to_split = ["341122", "364102", "364114", "364115", "364116", "364118", "364200"]
+#splits_to_do = [10, 11, 12, 22, 23]
 
-doBrick = True
-doLocal = False
-doSDSC  = False 
-doUC    = False 
+doBrick = True 
+doLocal = False 
+doSDSC  = False  
+doUC    = False  
 
 
 def get_retrylist() :
     #runlist = ["279867", "280464"]
-    runlist = ["410069"]
-    #retryfile = "/data/uclhc/uci/user/dantrim/n0228val/resub.txt"
+    runlist = ["364102","364114", "364115", "364116", "364118", "364200"]
+    runlist = ["342053"]
+    #runlist = ["341122"]
+    #retryfile = "/data/uclhc/uci/user/dantrim/n0232val/resub.txt"
     #lines = open(retryfile).readlines()
     #for line in lines :
     #    if not line : continue
@@ -100,7 +132,7 @@ def main() :
                 run_cmd += ' %s '%log_dir
                 run_cmd += ' %s '%ana_name
                 #run_cmd += ' %s '%(tar_location + "area.tgz.tgz")
-                run_cmd += ' n0228val '
+                run_cmd += ' n0232val '
                 run_cmd += ' %s '%dataset
                 run_cmd += ' %s '%run_mode # any extra cmd line optino for Superflow executable
                 run_cmd += '"'
@@ -127,6 +159,9 @@ def main() :
                     split_files.append(line)
 
                 for split_file in split_files :
+                    #if split_suffix not in splits_to_do :
+                    #    split_suffix = split_suffix + 1
+                    #    continue
                     print "    >>> Sub-file [%d] %s"%(split_suffix, split_file)
 
                     run_cmd = "ARGS="
@@ -135,7 +170,7 @@ def main() :
                     run_cmd += ' %s '%log_dir
                     run_cmd += ' %s '%ana_name
                     #run_cmd += ' %s '%(tar_location + "area.tgz.tgz")
-                    run_cmd += ' n0228val '
+                    run_cmd += ' n0232val '
                     run_cmd += ' %s '%split_file
                     run_cmd += ' %s --sumw --suffix %d'%(run_mode, split_suffix) # any extra cmd line optino for Superflow executable
                     run_cmd += '"'

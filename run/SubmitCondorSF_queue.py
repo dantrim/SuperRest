@@ -5,42 +5,107 @@ import glob
 import subprocess
 import time
 
-ana_name = "rjigsawAna_MT"
+ana_name = "rjigsawAna_WWBB"
 tar_location = "/data/uclhc/uci/user/dantrim/"
 
 #n_split = sys.argv[1]
 
-out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0231/test_queue/Raw/"
-log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0231/test_queue/logs/"
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc/diboson_SF/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc/diboson_SF/logs/"
 
-filelist_dir = "/data/uclhc/uci/user/dantrim/n0231val/filelists/"
-in_job_filelist_dir = "/n0231val/filelists/"
-#samples = ["data16"]
-samples = ["diboson_sherpa_lvlv"] #, "higgs"]
-#samples = ["higgs"]
-#samples = ["diboson_sherpa_lvlv", "drellyan_sherpa", "wjets_sherpa22", "zjets_sherpa22", "ttV", "singletop"]
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc/logs/"
+
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/for_fakes/mar8/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/for_fakes/mar8/logs/"
+
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc_met_sys/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc_met_sys/logs/"
+
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc_met_sys/diboson_SF/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc_met_sys/diboson_SF/logs/"
+
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/b_mar7/mc/logs/"
+
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/c_apr27/mc/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/c_apr27/mc/logs/"
+
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/c_apr27/data/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/c_apr27/data/logs/"
+
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/e_may31/mc/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/e_may31/mc/logs/"
+
+out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/f_jun5/mc/Raw/"
+log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/f_jun5/mc/logs/"
+
+out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/g_jun23/mc/Raw/"
+log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/g_jun23/mc/logs/"
+
+out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/g_jun23/mc_with_b/Raw/"
+log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/g_jun23/mc_with_b/logs/"
+
+out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/h_jun26/mc/Raw/"
+log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/h_jun26/mc/logs/"
+
+#out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/f_jun5/data/Raw/"
+#log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/f_jun5/data/logs/"
+
+out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/h_jun26/data/Raw/"
+log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/h_jun26/data/logs/"
+
+out_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/h_jun26/mc/Raw/"
+log_dir = "/data/uclhc/uci/user/dantrim/ntuples/n0232/h_jun26/mc/logs/"
+
+filelist_dir = "/data/uclhc/uci/user/dantrim/n0232val/new_filelists/"
+in_job_filelist_dir = "/n0232val/new_filelists/"
+#in_job_filelist_dir = "/n0232val/new_filelists/"
+#samples = ["singletop", "ttV", "zjets_and_DY", "wjets_sherpa", "higgs", "bwn"]
+#samples = ["singletop", "ttV", "zjets_and_DY", "wjets_sherpa", "higgs", "diboson_sherpa", "wwbb_susynt"]
+#samples = ["wwbb_susy2", "singletop", "ttV", "zjets_and_DY", "wjets_sherpa", "higgs", "diboson_sherpa"]
+#samples = ["retry_mc"]
+#samples = ["wwbb_susy2", "Wt"]
+#samples = ["singletop", "ttV", "zjets_and_DY", "wjets_sherpa", "higgs", "wwbb_susy2", "diboson_sherpa"]
+samples = ["data"]
+samples = ["retry_data"]
+samples = ["singletop_DS"]
+#samples = ["wwbb_susy2"]
+#samples = ["diboson_sherpa"]
+#samples = ["bffN"]
+#samples = ["bwn_m1001L20_overlap"]
+#samples = ["wwbb_susynt"]
+#samples = ["bwn_m1001L20"]
+#samples = ["diboson_sherpa"]
+#samples = ["zjets_and_DY"]
 
 samples_to_split = ["410009"]
 
-doBrick = True
+doBrick = True 
 doLocal = False 
 doSDSC  = False  
 doUC    = False  
 
 
 def get_retrylist() :
-    #runlist = ["279867", "280464"]
-    #runlist = ["363389","363373","363369","363111","363104"]
-    #runlist = ["306269"]
-    #runlist = ["307514"]
+
     runlist = []
-    lines = open("retrylist.txt").readlines()
+    #lines = open("data_to_resubmit.txt").readlines()
+    lines = open("retry.txt").readlines()
     for line in lines :
         if not line : continue
         line = line.strip()
         runlist.append(str(line))
+
+    #runlist = ["364102", "364114", "364115", "364116", "364118", "364200"]
+    #runlist = []
+    #lines = open("retrylist.txt").readlines()
+    #for line in lines :
+    #    if not line : continue
+    #    line = line.strip()
+    #    runlist.append(str(line))
     #runlist = ["279867","280464"]
-    #retryfile = "/data/uclhc/uci/user/dantrim/n0231val/resub.txt"
+    #retryfile = "/data/uclhc/uci/user/dantrim/n0232val/resub.txt"
     #lines = open(retryfile).readlines()
     #for line in lines :
     #    if not line : continue
@@ -51,7 +116,7 @@ def get_retrylist() :
 def main() :
     print "SubmitCondorSF"
 
-    for s in samples[:1] :
+    for s in samples :
         print "Submtting sample : %s"%s
         suff = ""
         if not s.endswith("/") : suff = "/"
@@ -63,15 +128,15 @@ def main() :
         #retry_list = get_retrylist()
         #new_lists = []
         #for s_ in sample_lists :
-        #    for x in retry_list[:1] :
+        #    for x in retry_list :
         #        if x in s_ :
         #            new_lists.append(s_)
         #sample_lists = new_lists
 
-
         number_of_samples = len(sample_lists)
         print "number of samples: ",number_of_samples
         print s
+        #print sample_lists
         process_group= s
 
 
@@ -82,7 +147,7 @@ def main() :
 
 
         # Superflow run mode
-        run_mode = "-a"
+        run_mode = "-c "
 
         # build the job command
         run_cmd = "ARGS="
@@ -90,7 +155,7 @@ def main() :
         run_cmd += ' %s '%out_dir
         run_cmd += ' %s '%log_dir
         run_cmd += ' %s '%ana_name
-        run_cmd += ' n0231val '
+        run_cmd += ' n0232val '
         run_cmd += ' %s '%process_group
         run_cmd += ' %s'%run_mode # put here any extra cmd line options for Superflow executable
         run_cmd += '"'
@@ -141,7 +206,7 @@ def main() :
 #                run_cmd += ' %s '%log_dir
 #                run_cmd += ' %s '%ana_name
 #                #run_cmd += ' %s '%(tar_location + "area.tgz.tgz")
-#                run_cmd += ' n0231val '
+#                run_cmd += ' n0232val '
 #                run_cmd += ' %s '%dataset
 #                run_cmd += ' %s '%run_mode # any extra cmd line optino for Superflow executable
 #                run_cmd += '"'
@@ -175,7 +240,7 @@ def main() :
 #                    run_cmd += ' %s '%log_dir
 #                    run_cmd += ' %s '%ana_name
 #                    #run_cmd += ' %s '%(tar_location + "area.tgz.tgz")
-#                    run_cmd += ' n0231val '
+#                    run_cmd += ' n0232val '
 #                    run_cmd += ' %s '%split_file
 #                    run_cmd += ' %s --sumw --suffix %d'%(run_mode, split_suffix) # any extra cmd line optino for Superflow executable
 #                    run_cmd += '"'

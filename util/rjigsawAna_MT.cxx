@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
     if(suffix_name_!="")
         cutflow->setFileSuffix(suffix_name_);
     if(do_sumw_split) {
-        string sumw_file = "./n0231val/sumw_file.txt";
+        string sumw_file = "./n0232val/sumw_file.txt";
         //string sumw_file = "/data/uclhc/uci/user/dantrim/n0229val/sumw_file.txt"; 
         cout << analysis_name << "    Reading sumw for sample from file: " << sumw_file << endl; 
         cutflow->setUseSumwFile(sumw_file);
@@ -159,16 +159,16 @@ int main(int argc, char* argv[])
         return ( (*sl->leptons->at(0) + *sl->leptons->at(1)).M() > 20. );
     };
 
-    //*cutflow << CutName("veto SF Z-window (within 10 GeV)") << [](Superlink* sl) -> bool {
-    //    bool pass = true;
-    //    bool isSF = false;
-    //    if((sl->leptons->size()==2 && (sl->electrons->size()==2 || sl->muons->size()==2))) isSF = true;
-    //    if(isSF) {
-    //        double mll = (*sl->leptons->at(0) + *sl->leptons->at(1)).M();
-    //        if( fabs(mll-91.2) < 10. ) pass = false;
-    //    }
-    //    return pass;
-    //};
+    *cutflow << CutName("veto SF Z-window (within 10 GeV)") << [](Superlink* sl) -> bool {
+        bool pass = true;
+        bool isSF = false;
+        if((sl->leptons->size()==2 && (sl->electrons->size()==2 || sl->muons->size()==2))) isSF = true;
+        if(isSF) {
+            double mll = (*sl->leptons->at(0) + *sl->leptons->at(1)).M();
+            if( fabs(mll-91.2) < 20. ) pass = false;
+        }
+        return pass;
+    };
 
     *cutflow << CutName("pass trigger requirement") << [&](Superlink* sl) -> bool {
         int year = sl->nt->evt()->treatAsYear;
@@ -911,17 +911,18 @@ int main(int argc, char* argv[])
 //        *cutflow << SaveVar();
 //    }
 
-    *cutflow << NewVar("mt2"); {
-        *cutflow << HFTname("mt2");
-        *cutflow << [&](Superlink* sl, var_float*) -> double {
-            double mt2 = -999.0;
-            if(leptons.size() == 2) {
-                mt2 = kin::getMT2(*sl->leptons, *sl->met);
-            }
-            return mt2;
-        };
-        *cutflow << SaveVar();
-    }
+#warning not calculating mt2
+//    *cutflow << NewVar("mt2"); {
+//        *cutflow << HFTname("mt2");
+//        *cutflow << [&](Superlink* sl, var_float*) -> double {
+//            double mt2 = -999.0;
+//            if(leptons.size() == 2) {
+//                mt2 = kin::getMT2(*sl->leptons, *sl->met);
+//            }
+//            return mt2;
+//        };
+//        *cutflow << SaveVar();
+//    }
     double meff;
     *cutflow << NewVar("meff : scalar sum pt of all jets, leptons, and met"); {
         *cutflow << HFTname("meff");
@@ -4322,28 +4323,28 @@ int main(int argc, char* argv[])
         *cutflow << TreeName("JET_GroupedNP_3_DN");
         *cutflow << SaveSystematic();
     }
-
+    //#warning only setting MET systematics
     // met
- //   *cutflow << NewSystematic("MET TST Soft-Term resolution (parallel)"); {
- //       *cutflow << EventSystematic(NtSys::MET_SoftTrk_ResoPara);
- //       *cutflow << TreeName("MET_SoftTrk_ResoPara");
- //       *cutflow << SaveSystematic();
- //   }
- //   *cutflow << NewSystematic("MET TST Soft-Term resolution (perpendicular)"); {
- //       *cutflow << EventSystematic(NtSys::MET_SoftTrk_ResoPerp);
- //       *cutflow << TreeName("MET_SoftTrk_ResoPerp");
- //       *cutflow << SaveSystematic();
- //   }
- //   *cutflow << NewSystematic("MET TST Soft-Term shift in scale (UP)"); {
- //       *cutflow << EventSystematic(NtSys::MET_SoftTrk_ScaleUp);
- //       *cutflow << TreeName("MET_SoftTrk_ScaleUp");
- //       *cutflow << SaveSystematic();
- //   }
- //   *cutflow << NewSystematic("MET TST Soft-Term shift in scale (DOWN)"); {
- //       *cutflow << EventSystematic(NtSys::MET_SoftTrk_ScaleDown);
- //       *cutflow << TreeName("MET_SoftTrk_ScaleDown");
- //       *cutflow << SaveSystematic();
- //   }
+    *cutflow << NewSystematic("MET TST Soft-Term resolution (parallel)"); {
+        *cutflow << EventSystematic(NtSys::MET_SoftTrk_ResoPara);
+        *cutflow << TreeName("MET_SoftTrk_ResoPara");
+        *cutflow << SaveSystematic();
+    }
+    *cutflow << NewSystematic("MET TST Soft-Term resolution (perpendicular)"); {
+        *cutflow << EventSystematic(NtSys::MET_SoftTrk_ResoPerp);
+        *cutflow << TreeName("MET_SoftTrk_ResoPerp");
+        *cutflow << SaveSystematic();
+    }
+    *cutflow << NewSystematic("MET TST Soft-Term shift in scale (UP)"); {
+        *cutflow << EventSystematic(NtSys::MET_SoftTrk_ScaleUp);
+        *cutflow << TreeName("MET_SoftTrk_ScaleUp");
+        *cutflow << SaveSystematic();
+    }
+    *cutflow << NewSystematic("MET TST Soft-Term shift in scale (DOWN)"); {
+        *cutflow << EventSystematic(NtSys::MET_SoftTrk_ScaleDown);
+        *cutflow << TreeName("MET_SoftTrk_ScaleDown");
+        *cutflow << SaveSystematic();
+    }
 
 
     ////////////////////////////////////////////////////////////////////////

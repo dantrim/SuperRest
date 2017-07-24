@@ -6,6 +6,7 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <math.h>
 
 // ROOT
 #include "TChain.h"
@@ -22,6 +23,7 @@
 #include "Superflow/Superflow.h"
 #include "Superflow/Superlink.h"
 #include "Superflow/Cut.h"
+#include "Superflow/PhysicsTools.h"
 
 // RestFrames
 #include "RestFrames/RestFrames.hh"
@@ -65,7 +67,7 @@ int main(int argc, char* argv[])
     ////////////////////////////////////////////////////
     Superflow* cutflow = new Superflow();
     cutflow->setAnaName(analysis_name);
-    cutflow->setAnaType(AnalysisType::Ana_Stop2L);
+    cutflow->setAnaType(AnalysisType::Ana_WWBB);
     cutflow->setLumi(1000); // 1/fb
     cutflow->setSampleName(sample_);
     cutflow->setRunMode(run_mode_);
@@ -79,8 +81,6 @@ int main(int argc, char* argv[])
         cout << analysis_name << "    Reading sumw for sample from file: " << sumw_file << endl; 
         cutflow->setUseSumwFile(sumw_file);
     }
-
-    // initialize trigger
     cutflow->nttools().initTriggerTool(ChainHelper::firstFile(sample_, m_dbg));
 
     // print some useful
@@ -147,17 +147,21 @@ int main(int argc, char* argv[])
         return sl->leptons->size() == 2;
     };
 
+    ///*
     *cutflow << CutName("lepton pTs > 20 GeV") << [](Superlink* sl) -> bool {
         return ( (sl->leptons->at(0)->Pt()>20) && (sl->leptons->at(1)->Pt()>20) );
     };
+    //*/
 
     *cutflow << CutName("opposite sign") << [](Superlink* sl) -> bool {
         return ((sl->leptons->at(0)->q * sl->leptons->at(1)->q) < 0);
     };
 
+    ///*
     *cutflow << CutName("mll > 20 GeV") << [](Superlink* sl) -> bool {
         return ( (*sl->leptons->at(0) + *sl->leptons->at(1)).M() > 20. );
     };
+    //*/
 
     *cutflow << CutName("veto SF Z-window (within 10 GeV)") << [](Superlink* sl) -> bool {
         bool pass = true;
@@ -171,7 +175,7 @@ int main(int argc, char* argv[])
     };
 
 
-    ///*
+    /*
     *cutflow << CutName("pass trigger requirement") << [&](Superlink* sl) -> bool {
         int year = sl->nt->evt()->treatAsYear;
         bool pass = false;
@@ -190,7 +194,7 @@ int main(int argc, char* argv[])
         }
         return pass;
     };
-    //*/
+    */
     
     //*cutflow << CutName("isSF") << [&](Superlink* sl) -> bool {
     //    bool isSF = false;
@@ -225,7 +229,63 @@ int main(int argc, char* argv[])
     bool pass_2e17_lhvloose_nod0;
     bool pass_mu22_mu8noL1;
     bool pass_e17_lhloose_nod0_mu14;
+
+    // for eff
+    bool p_mu20;
+    bool p_mu20_iloose_L1MU15;
+    bool p_mu22;
+    bool p_mu24;
+    bool p_mu24_iloose;
+    bool p_mu24_imedium;
+    bool p_mu24_iloose_L1MU15;
+    bool p_mu26_imedium;
+    bool p_mu40;
+    bool p_mu50;
+    bool p_mu60_0eta105_msonly;
+    bool p_mu18_mu8noL1;
+    bool p_mu20_mu8noL1;
+    bool p_mu22_mu8noL1;
+    bool p_mu24_mu8noL1;
+    bool p_e12_lhloose;
+    bool p_e12_lhloose_L1EM10VH;
+    bool p_e15_lhloose_L1EM13VH;
+    bool p_e17_lhloose;
+    bool p_e17_lhmedium;
+    bool p_e24_lhmedium_iloose_L1EM18VH;
+    bool p_e24_lhmedium_iloose_L1EM20VH;
+    bool p_e24_lhmedium_L1EM20VHI;
+    bool p_e24_lhtight_iloose;
+    bool p_e24_lhtight_nod0_iloose;
+    bool p_e24_lhmedium_nod0_iloose_L1EM20VH;
+    bool p_e24_lhtight_ivarloose;
+    bool p_e24_lhtight_nod0_ivarloose;
+    bool p_e26_lhmedium_L1EM22VHI;
+    bool p_e26_lhtight_iloose;
+    bool p_e26_lhtight_nod0_iloose;
+    bool p_e26_lhtight_ivarloose;
+    bool p_e26_lhtight_nod0_ivarloose;
+    bool p_e60_lhmedium;
+    bool p_e60_lhmedium_nod0;
+    bool p_2e12_lhloose_L12EM10VH;
+    bool p_2e15_lhloose_L12EM13VH;
+    bool p_2e15_lhvloose_L12EM13VH;
+    bool p_2e15_lhvloose_nod0_L12EM13VH;
+    bool p_2e17_lhloose;
+    bool p_2e17_lhvloose;
+    bool p_2e17_lhvloose_nod0;
+    bool p_e17_lhloose_mu14;
+    bool p_e17_lhloose_nod0_mu14;
+    bool p_e7_lhmedium_mu24;
+    bool p_e7_lhmedium_nod0_mu24;
+    bool p_e26_lhmedium_L1EM22VHI_mu8noL1;
+    bool p_e26_lhmedium_nod0_L1EM22VHI_mu8noL1;
+    bool p_e24_lhmedium_L1EM20VHI_mu8noL1;
+
+
     *cutflow << [&](Superlink* sl, var_void*) {
+
+        // S2L
+
         pass_mu18_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu18_mu8noL1");
         pass_mu20_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu20_mu8noL1");
         pass_e17_lhloose_mu14 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e17_lhloose_mu14");
@@ -234,6 +294,60 @@ int main(int argc, char* argv[])
         pass_2e17_lhvloose_nod0 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e17_lhvloose_nod0");
         pass_mu22_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu22_mu8noL1");
         pass_e17_lhloose_nod0_mu14 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e17_lhloose_nod0_mu14"); 
+
+        // eff
+        p_mu20 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu20");
+        p_mu20_iloose_L1MU15 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu20_iloose_L1MU15");
+        p_mu22 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu22");
+        p_mu24 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu24");
+        p_mu24_iloose = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu24_iloose");
+        p_mu24_imedium = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu24_imedium");
+        p_mu24_iloose_L1MU15 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu24_iloose_L1MU15");
+        p_mu26_imedium = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu26_imedium"); 
+        p_mu40 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu40");
+        p_mu50 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu50");
+        p_mu60_0eta105_msonly = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu60_0eta105_msonly");
+        p_mu18_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu18_mu8noL1");
+        p_mu20_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu20_mu8noL1");
+        p_mu22_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu22_mu8noL1");
+        p_mu24_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_mu24_mu8noL1");
+        p_e12_lhloose = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e12_lhloose");
+        p_e12_lhloose_L1EM10VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e12_lhloose_L1EM10VH");
+        p_e15_lhloose_L1EM13VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e15_lhloose_L1EM13VH");
+        p_e17_lhloose = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e17_lhloose");
+        p_e17_lhmedium = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e17_lhmedium");
+        p_e24_lhmedium_iloose_L1EM18VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e24_lhmedium_iloose_L1EM18VH");
+        p_e24_lhmedium_iloose_L1EM20VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e24_lhmedium_iloose_L1EM20VH");
+        p_e24_lhmedium_L1EM20VHI = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e24_lhmedium_L1EM20VHI");
+        p_e24_lhtight_iloose = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e24_lhtight_iloose");
+        p_e24_lhtight_nod0_iloose = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e24_lhtight_nod0_iloose");
+        p_e24_lhmedium_nod0_iloose_L1EM20VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e24_lhmedium_nod0_iloose_L1EM20VH");
+        p_e24_lhtight_ivarloose = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e24_lhtight_ivarloose");
+        //p_e24_lhtight_nod0_ivarloose = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e24_lhtight_nod0_ivarloose");
+        p_e24_lhtight_nod0_ivarloose = false;
+
+        p_e26_lhmedium_L1EM22VHI = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e26_lhmedium_L1EM22VHI");
+        p_e26_lhtight_iloose = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e26_lhtight_iloose");
+        p_e26_lhtight_nod0_iloose = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e26_lhtight_nod0_iloose");
+        p_e26_lhtight_ivarloose = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e26_lhtight_ivarloose");
+        //p_e26_lhtight_nod0_ivarloose = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e26_lhtight_nod0_ivarloose");
+        p_e26_lhtight_nod0_ivarloose = false;
+    
+        p_e60_lhmedium = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e60_lhmedium");
+        p_e60_lhmedium_nod0 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e60_lhmedium_nod0");
+        p_2e12_lhloose_L12EM10VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e12_lhloose_L12EM10VH");
+        p_2e15_lhloose_L12EM13VH = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e15_lhloose_L12EM13VH");
+        p_2e17_lhloose = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e17_lhloose");
+        p_2e17_lhvloose = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e17_lhvloose");
+        p_2e17_lhvloose_nod0 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_2e17_lhvloose_nod0");
+        p_e17_lhloose_mu14 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e17_lhloose_mu14");
+        p_e17_lhloose_nod0_mu14 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e17_lhloose_nod0_mu14");
+        p_e7_lhmedium_mu24 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e7_lhmedium_mu24");
+        p_e7_lhmedium_nod0_mu24 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e7_lhmedium_nod0_mu24");
+        p_e26_lhmedium_L1EM22VHI_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e26_lhmedium_L1EM22VHI_mu8noL1");
+        p_e26_lhmedium_nod0_L1EM22VHI_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e26_lhmedium_nod0_L1EM22VHI_mu8noL1");
+        p_e24_lhmedium_L1EM20VHI_mu8noL1 = sl->tools->triggerTool().passTrigger(sl->nt->evt()->trigBits, "HLT_e24_lhmedium_L1EM20VHI_mu8noL1");
+        
     };
     *cutflow << NewVar("pass mu18_mu8noL1"); {
         *cutflow << HFTname("trig_mu18_mu8noL1");
@@ -312,6 +426,449 @@ int main(int argc, char* argv[])
         };
         *cutflow << SaveVar();
     }
+
+
+    // eff trig cuts
+    *cutflow << NewVar("pass_mu20"); {
+        *cutflow << HFTname("trig_mu20");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_mu20;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_mu20_iloose_L1MU15"); {
+        *cutflow << HFTname("trig_mu20_iloose_L1MU15");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_mu20_iloose_L1MU15;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_mu22"); {
+        *cutflow << HFTname("trig_mu22");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_mu22;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_mu24"); {
+        *cutflow << HFTname("trig_mu24");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_mu24;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_mu24_iloose"); {
+        *cutflow << HFTname("trig_mu24_iloose");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_mu24_iloose;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_mu24_imedium"); {
+        *cutflow << HFTname("trig_mu24_imedium");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_mu24_imedium;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_mu24_iloose_L1MU15"); {
+        *cutflow << HFTname("trig_mu24_iloose_L1MU15");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_mu24_iloose_L1MU15;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_mu26_imedium"); {
+        *cutflow << HFTname("trig_mu26_imedium");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_mu26_imedium;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_mu40"); {
+        *cutflow << HFTname("trig_mu40");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_mu40;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_mu50"); {
+        *cutflow << HFTname("trig_mu50");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_mu50;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_mu60_0eta105_msonly"); {
+        *cutflow << HFTname("trig_mu60_0eta105_msonly");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_mu60_0eta105_msonly;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_mu18_mu8noL1"); {
+        *cutflow << HFTname("trig_mu18_mu8noL1");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_mu18_mu8noL1;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_mu20_mu8noL1"); {
+        *cutflow << HFTname("trig_mu20_mu8noL1");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_mu20_mu8noL1;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_mu22_mu8noL1"); {
+        *cutflow << HFTname("trig_mu22_mu8noL1");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_mu22_mu8noL1;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_mu24_mu8noL1"); {
+        *cutflow << HFTname("trig_mu24_mu8noL1");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_mu24_mu8noL1;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e12_lhloose"); {
+        *cutflow << HFTname("trig_e12_lhloose");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e12_lhloose;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e12_lhloose_L1EM10VH"); {
+        *cutflow << HFTname("trig_e12_lhloose_L1EM10VH");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e12_lhloose_L1EM10VH;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e15_lhloose_L1EM13VH"); {
+        *cutflow << HFTname("trig_e15_lhloose_L1EM13VH");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e15_lhloose_L1EM13VH;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e17_lhloose"); {
+        *cutflow << HFTname("trig_e17_lhloose");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e17_lhloose;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e17_lhmedium"); {
+        *cutflow << HFTname("trig_e17_lhmedium");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e17_lhmedium;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e24_lhmedium_iloose_L1EM18VH"); {
+        *cutflow << HFTname("trig_e24_lhmedium_iloose_L1EM18VH");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e24_lhmedium_iloose_L1EM18VH;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e24_lhmedium_iloose_L1EM20VH"); {
+        *cutflow << HFTname("trig_e24_lhmedium_iloose_L1EM20VH");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e24_lhmedium_iloose_L1EM20VH;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e24_lhmedium_L1EM20VHI"); {
+        *cutflow << HFTname("trig_e24_lhmedium_L1EM20VHI");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e24_lhmedium_L1EM20VHI;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e24_lhtight_iloose"); {
+        *cutflow << HFTname("trig_e24_lhtight_iloose");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e24_lhtight_iloose;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e24_lhtight_nod0_iloose"); {
+        *cutflow << HFTname("trig_e24_lhtight_nod0_iloose");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e24_lhtight_nod0_iloose;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e24_lhmedium_nod0_iloose_L1EM20VH"); {
+        *cutflow << HFTname("trig_e24_lhmedium_nod0_iloose_L1EM20VH");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e24_lhmedium_nod0_iloose_L1EM20VH;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e24_lhtight_ivarloose"); {
+        *cutflow << HFTname("trig_e24_lhtight_ivarloose");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e24_lhtight_ivarloose;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e24_lhtight_nod0_ivarloose"); {
+        *cutflow << HFTname("trig_e24_lhtight_nod0_ivarloose");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e24_lhtight_nod0_ivarloose;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e26_lhmedium_L1EM22VHI"); {
+        *cutflow << HFTname("trig_e26_lhmedium_L1EM22VHI");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e26_lhmedium_L1EM22VHI;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e26_lhtight_iloose"); {
+        *cutflow << HFTname("trig_e26_lhtight_iloose");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e26_lhtight_iloose;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e26_lhtight_nod0_iloose"); {
+        *cutflow << HFTname("trig_e26_lhtight_iloose_nod0");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e26_lhtight_nod0_iloose;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e26_lhtight_ivarloose"); {
+        *cutflow << HFTname("trig_e26_lhtight_ivarloose");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e26_lhtight_ivarloose;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e26_lhtight_nod0_ivarloose"); {
+        *cutflow << HFTname("trig_e26_lhtight_nod0_ivarloose");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e26_lhtight_nod0_ivarloose;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e60_lhmedium"); {
+        *cutflow << HFTname("trig_e60_lhmedium");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e60_lhmedium;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e60_lhmedium_nod0"); {
+        *cutflow << HFTname("trig_e60_lhmedium_nod0");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e60_lhmedium_nod0;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_2e12_lhloose_L12EM10VH"); {
+        *cutflow << HFTname("trig_2e12_lhloose_L12EM10VH");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_2e12_lhloose_L12EM10VH;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_2e15_lhloose_L12EM13VH"); {
+        *cutflow << HFTname("trig_2e15_lhloose_L12EM13VH");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_2e15_lhloose_L12EM13VH;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_2e15_lhvloose_L12EM13VH"); {
+        *cutflow << HFTname("trig_2e15_lhvloose_L12EM13VH");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_2e15_lhvloose_L12EM13VH;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_2e15_lhvloose_nod0_L12EM13VH"); {
+        *cutflow << HFTname("trig_2e15_lhvloose_nod0_L12EM13VH");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_2e15_lhvloose_nod0_L12EM13VH;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_2e17_lhloose"); {
+        *cutflow << HFTname("trig_2e17_lhloose");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_2e17_lhloose;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_2e17_lhvloose"); {
+        *cutflow << HFTname("trig_2e17_lhvloose");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_2e17_lhvloose;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_2e17_lhvloose_nod0"); {
+        *cutflow << HFTname("trig_2e17_lhvloose_nod0");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_2e17_lhvloose_nod0;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e17_lhloose_mu14"); {
+        *cutflow << HFTname("trig_e17_lhloose_mu14");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e17_lhloose_mu14;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e17_lhloose_nod0_mu14"); {
+        *cutflow << HFTname("trig_e17_lhloose_nod0_mu14");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e17_lhloose_nod0_mu14;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e7_lhmedium_mu24"); {
+        *cutflow << HFTname("trig_e7_lhmedium_mu24");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e7_lhmedium_mu24;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e7_lhmedium_nod0_mu24"); {
+        *cutflow << HFTname("trig_e7_lhmedium_nod0_mu24");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e7_lhmedium_nod0_mu24;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e26_lhmedium_L1EM22VHI_mu8noL1"); {
+        *cutflow << HFTname("trig_e26_lhmedium_L1EM22VHI_mu8noL1");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e26_lhmedium_L1EM22VHI_mu8noL1;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e26_lhmedium_nod0_L1EM22VHI_mu8noL1"); {
+        *cutflow << HFTname("trig_e26_lhmedium_nod0_L1EM22VHI_mu8noL1");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e26_lhmedium_nod0_L1EM22VHI_mu8noL1;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+    *cutflow << NewVar("pass_e24_lhmedium_L1EM20VHI_mu8noL1"); {
+        *cutflow << HFTname("trig_e24_lhmedium_L1EM20VHI_mu8noL1");
+        *cutflow << [&](Superlink* sl, var_bool*) -> bool {
+            return p_e24_lhmedium_L1EM20VHI_mu8noL1;
+        };
+        *cutflow << SaveVar();
+    }
+
 
     *cutflow << NewVar("mcid"); {
         *cutflow << HFTname("mcid");
@@ -658,14 +1215,40 @@ int main(int argc, char* argv[])
     JetVector jets;
     JetVector bjets;
     JetVector sjets;
+
+    JetVector bjets30;
+    JetVector sjets30;
+    JetVector bjets40;
+    JetVector sjets40;
+    JetVector bjets50;
+    JetVector sjets50;
+    JetVector bjets60;
+    JetVector sjets60;
+
     *cutflow << [&](Superlink* sl, var_void*) { jets = *sl->jets; };
     *cutflow << [&](Superlink* sl, var_void*) {
         for(int i = 0; i < jets.size(); i++) {
             Jet* j = jets[i];
             if(sl->tools->jetSelector().isB(j))  bjets.push_back(j);
             if(!sl->tools->jetSelector().isB(j)) sjets.push_back(j);
+
+            // 30
+            if(sl->tools->jetSelector().isBMod(j, 85, 30)) bjets30.push_back(j);
+            if(!sl->tools->jetSelector().isBMod(j, 85, 30)) sjets30.push_back(j);
+            // 40
+            if(sl->tools->jetSelector().isBMod(j, 85, 40)) bjets40.push_back(j);
+            if(!sl->tools->jetSelector().isBMod(j, 85, 40)) sjets40.push_back(j);
+            // 50
+            if(sl->tools->jetSelector().isBMod(j, 85, 50)) bjets50.push_back(j);
+            if(!sl->tools->jetSelector().isBMod(j, 85, 50)) sjets50.push_back(j);
+            // 60
+            if(sl->tools->jetSelector().isBMod(j, 85, 60)) bjets60.push_back(j);
+            if(!sl->tools->jetSelector().isBMod(j, 85, 60)) sjets60.push_back(j);
+
         }// i
     };
+
+
     *cutflow << NewVar("number of jets"); {
         *cutflow << HFTname("nJets");
         *cutflow << [&](Superlink* sl, var_int*) -> int {
@@ -680,6 +1263,35 @@ int main(int argc, char* argv[])
         };
         *cutflow << SaveVar();
     }
+    *cutflow << NewVar("number of sjets (b>30)"); {
+        *cutflow << HFTname("nSJets30");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            return sjets30.size();
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("number of sjets (b>40)"); {
+        *cutflow << HFTname("nSJets40");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            return sjets40.size();
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("number of sjets (b>50)"); {
+        *cutflow << HFTname("nSJets50");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            return sjets50.size();
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("number of sjets (b>60)"); {
+        *cutflow << HFTname("nSJets60");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            return sjets60.size();
+        };
+        *cutflow << SaveVar();
+    }
+
     *cutflow << NewVar("number of bjets"); {
         *cutflow << HFTname("nBJets");
         *cutflow << [&](Superlink* sl, var_int*) -> int {
@@ -687,6 +1299,39 @@ int main(int argc, char* argv[])
         };
         *cutflow << SaveVar();
     }
+
+    *cutflow << NewVar("number of bjets pt>30"); {
+        *cutflow << HFTname("nBJets30");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            return bjets30.size();
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("number of bjets pt>40"); {
+        *cutflow << HFTname("nBJets40");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            return bjets40.size();
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("number of bjets pt>50"); {
+        *cutflow << HFTname("nBJets50");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            return bjets50.size();
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("number of bjets pt>60"); {
+        *cutflow << HFTname("nBJets60");
+        *cutflow << [&](Superlink* sl, var_int*) -> int {
+            return bjets60.size();
+        };
+        *cutflow << SaveVar();
+    }
+
+
+
 
     // add cut
     //*cutflow << CutName("at least 2 b-tagged jets") << [&](Superlink* sl) -> bool {
@@ -726,6 +1371,52 @@ int main(int argc, char* argv[])
             };
         *cutflow << SaveVar();
     }
+    *cutflow << NewVar("bjet pt 30"); {
+        *cutflow << HFTname("bj_pt30");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            for(int i = 0; i < bjets30.size(); i++) {
+                out.push_back(bjets30.at(i)->Pt());
+            }
+            return out;
+            };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("bjet pt 40"); {
+        *cutflow << HFTname("bj_pt40");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            for(int i = 0; i < bjets40.size(); i++) {
+                out.push_back(bjets40.at(i)->Pt());
+            }
+            return out;
+            };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("bjet pt 50"); {
+        *cutflow << HFTname("bj_pt50");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            for(int i = 0; i < bjets50.size(); i++) {
+                out.push_back(bjets50.at(i)->Pt());
+            }
+            return out;
+            };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("bjet pt 60"); {
+        *cutflow << HFTname("bj_pt60");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            for(int i = 0; i < bjets60.size(); i++) {
+                out.push_back(bjets60.at(i)->Pt());
+            }
+            return out;
+            };
+        *cutflow << SaveVar();
+    }
+
+
     *cutflow << NewVar("jet eta"); {
         *cutflow << HFTname("j_eta");
         *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
@@ -1043,6 +1734,45 @@ int main(int argc, char* argv[])
         };
         *cutflow << SaveVar();
     }
+    *cutflow << NewVar("dibjet mass vector"); {
+        *cutflow << HFTname("mbb_vec");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            if(bjets.size()>=2) {
+                out.push_back( (*bjets.at(0) + *bjets.at(1)).M());
+            }
+            else {
+                out.push_back(-10.);
+            }
+            if(bjets30.size()>=2) {
+                out.push_back( (*bjets30.at(0) + *bjets30.at(1)).M());
+            }
+            else {
+                out.push_back(-10.);
+            }
+            if(bjets40.size()>=2) {
+                out.push_back( (*bjets40.at(0) + *bjets40.at(1)).M());
+            }
+            else {
+                out.push_back(-10.);
+            }
+            if(bjets50.size()>=2) {
+                out.push_back( (*bjets50.at(0) + *bjets50.at(1)).M());
+            }
+            else {
+                out.push_back(-10.);
+            }
+            if(bjets60.size()>=2) {
+                out.push_back( (*bjets60.at(0) + *bjets60.at(1)).M());
+            }
+            else {
+                out.push_back(-10.);
+            }
+
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
 
     // dRbb
     *cutflow << NewVar("delta R between two leading b-jets"); {
@@ -1052,6 +1782,45 @@ int main(int argc, char* argv[])
                 return (bjets.at(0)->DeltaR(*bjets.at(1)));
             }
             return -10.;
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("delta R between two leading b-jet vec"); {
+        *cutflow << HFTname("dRbb_vec");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            if(bjets.size()>=2) {
+                out.push_back( bjets.at(0)->DeltaR(*bjets.at(1)) );
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            if(bjets30.size()>=2) {
+                out.push_back( bjets30.at(0)->DeltaR(*bjets30.at(1)) );
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            if(bjets40.size()>=2) {
+                out.push_back( bjets40.at(0)->DeltaR(*bjets40.at(1)) );
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            if(bjets50.size()>=2) {
+                out.push_back( bjets50.at(0)->DeltaR(*bjets50.at(1)) );
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            if(bjets60.size()>=2) {
+                out.push_back( bjets60.at(0)->DeltaR(*bjets60.at(1)) );
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            return out;
         };
         *cutflow << SaveVar();
     }
@@ -1073,6 +1842,62 @@ int main(int argc, char* argv[])
         *cutflow << SaveVar();
     }
 
+    *cutflow << NewVar("dR_ll_bb_vec"); {
+        *cutflow << HFTname("dR_ll_bb_vec");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            TLorentzVector l0 = (*leptons.at(0));
+            TLorentzVector l1 = (*leptons.at(1));
+            if(bjets.size()>=2) {
+                TLorentzVector b0 = (*bjets.at(0));
+                TLorentzVector b1 = (*bjets.at(1));
+
+                out.push_back( (l0 + l1).DeltaR( (b0 + b1) ) );
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            if(bjets30.size()>=2) {
+                TLorentzVector b0 = (*bjets30.at(0));
+                TLorentzVector b1 = (*bjets30.at(1));
+
+                out.push_back( (l0 + l1).DeltaR( (b0 + b1) ) );
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            if(bjets40.size()>=2) {
+                TLorentzVector b0 = (*bjets40.at(0));
+                TLorentzVector b1 = (*bjets40.at(1));
+
+                out.push_back( (l0 + l1).DeltaR( (b0 + b1) ) );
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            if(bjets50.size()>=2) {
+                TLorentzVector b0 = (*bjets50.at(0));
+                TLorentzVector b1 = (*bjets50.at(1));
+
+                out.push_back( (l0 + l1).DeltaR( (b0 + b1) ) );
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            if(bjets60.size()>=2) {
+                TLorentzVector b0 = (*bjets60.at(0));
+                TLorentzVector b1 = (*bjets60.at(1));
+
+                out.push_back( (l0 + l1).DeltaR( (b0 + b1) ) );
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+
     // dphi bb  ll
     *cutflow << NewVar("delta phi between bb and ll systems"); {
         *cutflow << HFTname("dphi_ll_bb");
@@ -1084,6 +1909,46 @@ int main(int argc, char* argv[])
         };
         *cutflow << SaveVar();
     }
+
+    *cutflow << NewVar("dphi_bb_ll_vec"); {
+        *cutflow << HFTname("dphi_ll_bb_vec");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            if(bjets.size()>=2) {
+                out.push_back((*bjets.at(0) + *bjets.at(1)).DeltaPhi( (*leptons.at(0) + *leptons.at(1))));
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            if(bjets30.size()>=2) {
+                out.push_back((*bjets30.at(0) + *bjets30.at(1)).DeltaPhi( (*leptons.at(0) + *leptons.at(1))));
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            if(bjets40.size()>=2) {
+                out.push_back((*bjets40.at(0) + *bjets40.at(1)).DeltaPhi( (*leptons.at(0) + *leptons.at(1))));
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            if(bjets50.size()>=2) {
+                out.push_back((*bjets50.at(0) + *bjets50.at(1)).DeltaPhi( (*leptons.at(0) + *leptons.at(1))));
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            if(bjets60.size()>=2) {
+                out.push_back((*bjets60.at(0) + *bjets60.at(1)).DeltaPhi( (*leptons.at(0) + *leptons.at(1))));
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+
 
     // dphi WW bb
     *cutflow << NewVar("delta phi between WW and bb systems"); {
@@ -1097,11 +1962,16 @@ int main(int argc, char* argv[])
         *cutflow << SaveVar();
     }
 
+    float delta_phi_x = -10.;
+    float delta_phi_x_scaled = -10.;
+    float delta_phi_x_scaled_ww = -10.;
+
     // mass_X
     *cutflow << NewVar("mass of X"); {
         *cutflow << HFTname("mass_X");
         *cutflow << [&](Superlink* sl, var_float*) -> double {
             if(bjets.size()>=2) {
+                delta_phi_x = (met.lv() + *leptons.at(0) + * leptons.at(1)).DeltaPhi((*bjets.at(0) + *bjets.at(1)));
                 return ( (met.lv() + *leptons.at(0) + *leptons.at(1) + *bjets.at(0) + *bjets.at(1)).M() );
             }
             return -10.;
@@ -1128,6 +1998,21 @@ int main(int argc, char* argv[])
         };
         *cutflow << SaveVar();
     }
+    *cutflow << NewVar("mass of X trans"); {
+        *cutflow << HFTname("mass_X_T_2");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            if(bjets.size()>=2) {
+                TLorentzVector l0 = (*leptons.at(0));
+                TLorentzVector l1 = (*leptons.at(1));
+                TLorentzVector b0 = (*bjets.at(0));
+                TLorentzVector b1 = (*bjets.at(1));
+                return ( ( met.lv() + l0 + l1 + b0 + b1).Mt() );
+            }
+            return -10.;
+        };
+        *cutflow << SaveVar();
+    }
+
 
     // mass_X scaled
     *cutflow << NewVar("mass of X with bb scaling"); {
@@ -1139,6 +2024,8 @@ int main(int argc, char* argv[])
                 TLorentzVector bjet_system = (*bjets.at(0) + *bjets.at(1));
                 bjet_system.SetPtEtaPhiE( bjet_system.Pt() * scaling, bjet_system.Eta(),
                                             bjet_system.Phi(), bjet_system.E() * scaling );
+
+                delta_phi_x_scaled = (met.lv() + *leptons.at(0) + *leptons.at(1)).DeltaPhi(bjet_system);
 
                 return ( (met.lv() + *leptons.at(0) + *leptons.at(1) + bjet_system).M() );
             }
@@ -1174,6 +2061,15 @@ int main(int argc, char* argv[])
             l0.SetPz(0.0);
             l1.SetPz(0.0);
             return ( ( met.lv() + l0 + l1).M() );
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("mass of met and dilepton system transv"); {
+        *cutflow << HFTname("mass_met_ll_T_2");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            TLorentzVector l0 = (*leptons.at(0));
+            TLorentzVector l1 = (*leptons.at(1));
+            return ( ( met.lv() + l0 + l1).Mt() );
         };
         *cutflow << SaveVar();
     }
@@ -1219,6 +2115,98 @@ int main(int argc, char* argv[])
                 return (num / den);
             }
             return -10.;
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("HT2Ratio vec"); {
+        *cutflow << HFTname("HT2Ratio_vec");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+
+            //////// pt 20
+            if(bjets.size() >= 2) {
+                double num = ( (*bjets.at(0) + *bjets.at(1)).Pt() + 
+                    (*leptons.at(0) + *leptons.at(1) + met.lv()).Pt() );
+
+                double den = ((*bjets.at(0)).Pt());
+                den += (*bjets.at(1)).Pt();
+                den += (*leptons.at(0)).Pt();
+                den += (*leptons.at(1)).Pt();
+                den += met.lv().Pt();
+                double ht2 = (num / den);
+                out.push_back(ht2);
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            //////// pt 30
+            if(bjets30.size() >= 2) {
+                double num = ( (*bjets30.at(0) + *bjets30.at(1)).Pt() + 
+                    (*leptons.at(0) + *leptons.at(1) + met.lv()).Pt() );
+
+                double den = ((*bjets30.at(0)).Pt());
+                den += (*bjets30.at(1)).Pt();
+                den += (*leptons.at(0)).Pt();
+                den += (*leptons.at(1)).Pt();
+                den += met.lv().Pt();
+                double ht2 = (num / den);
+                out.push_back(ht2);
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            //////// pt 40
+            if(bjets40.size() >= 2) {
+                double num = ( (*bjets40.at(0) + *bjets40.at(1)).Pt() + 
+                    (*leptons.at(0) + *leptons.at(1) + met.lv()).Pt() );
+
+                double den = ((*bjets40.at(0)).Pt());
+                den += (*bjets40.at(1)).Pt();
+                den += (*leptons.at(0)).Pt();
+                den += (*leptons.at(1)).Pt();
+                den += met.lv().Pt();
+                double ht2 = (num / den);
+                out.push_back(ht2);
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            //////// pt 50
+            if(bjets50.size() >= 2) {
+                double num = ( (*bjets50.at(0) + *bjets50.at(1)).Pt() + 
+                    (*leptons.at(0) + *leptons.at(1) + met.lv()).Pt() );
+
+                double den = ((*bjets50.at(0)).Pt());
+                den += (*bjets50.at(1)).Pt();
+                den += (*leptons.at(0)).Pt();
+                den += (*leptons.at(1)).Pt();
+                den += met.lv().Pt();
+                double ht2 = (num / den);
+                out.push_back(ht2);
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            //////// pt 60
+            if(bjets60.size() >= 2) {
+                double num = ( (*bjets60.at(0) + *bjets60.at(1)).Pt() + 
+                    (*leptons.at(0) + *leptons.at(1) + met.lv()).Pt() );
+
+                double den = ((*bjets60.at(0)).Pt());
+                den += (*bjets60.at(1)).Pt();
+                den += (*leptons.at(0)).Pt();
+                den += (*leptons.at(1)).Pt();
+                den += met.lv().Pt();
+                double ht2 = (num / den);
+                out.push_back(ht2);
+            }
+            else {
+                out.push_back(-10.0);
+            }
+
+            return out;
+
         };
         *cutflow << SaveVar();
     }
@@ -1276,6 +2264,190 @@ int main(int argc, char* argv[])
             }
             return -10.;
 
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("MT_1_test"); {
+        *cutflow << HFTname("MT_1_test");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            if(bjets.size()>=2) {
+                TLorentzVector bjet_system = (*bjets.at(0) + * bjets.at(1));
+                TLorentzVector vis = (*leptons.at(0) + *leptons.at(1) + bjet_system);
+                return (vis + met.lv()).Mt();
+            }
+            return -10.;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("MT_1_test_scaled"); {
+        *cutflow << HFTname("MT_1_test_scaled");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            if(bjets.size()>=2) {
+                TLorentzVector bjet_system = (*bjets.at(0) + * bjets.at(1));
+                double m_bb = bjet_system.M();
+                double scaling = 125.09/m_bb;
+                bjet_system.SetPtEtaPhiE(bjet_system.Pt() * scaling, bjet_system.Eta(), bjet_system.Phi(), bjet_system.E() * scaling);
+                TLorentzVector vis = (*leptons.at(0) + *leptons.at(1) + bjet_system);
+                return (vis + met.lv()).Mt();
+            }
+            return -10.;
+        };
+        *cutflow << SaveVar();
+    }
+        
+        
+
+    // MT_1_scaled with h->WW scaled in addition to h->bb
+    *cutflow << NewVar("mass_X_scaled_ww"); {
+        *cutflow << HFTname("mass_X_scaled_ww");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            if(bjets.size()>=2) {
+
+                TLorentzVector bjet_system = (*bjets.at(0) + *bjets.at(1));
+                double mbb = bjet_system.M();
+                double scaling = 125.09/mbb;
+                bjet_system.SetPtEtaPhiE(bjet_system.Pt() * scaling, bjet_system.Eta(), bjet_system.Phi(), bjet_system.E() * scaling);
+    
+                const TLorentzVector v0 = ( *leptons.at(0) + *leptons.at(1) );
+                const TLorentzVector v1 = ( *bjets.at(0) + *bjets.at(1) );
+                float mt2_llbb = kin::getMT2( v0, v1, met );
+
+                TLorentzVector ww_system = (*leptons.at(0) + *leptons.at(1) + met.lv());
+                //double mww = ww_system.M();
+                double ww_scaling = 125.09/mt2_llbb;
+                ww_system.SetPtEtaPhiE(ww_system.Pt() * ww_scaling, ww_system.Eta(), ww_system.Phi(), ww_system.E() * ww_scaling);
+
+                delta_phi_x_scaled_ww = ww_system.DeltaPhi(bjet_system);
+
+                return (bjet_system + ww_system).M();
+            }
+            return -10.;
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("delta_phi_x"); {
+        *cutflow << HFTname("delta_phi_x");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return delta_phi_x;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("delta_phi_x_scaled"); {
+        *cutflow << HFTname("delta_phi_x_scaled");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return delta_phi_x_scaled;
+        };
+        *cutflow << SaveVar();
+    }
+    *cutflow << NewVar("delta_phi_x_scaled_ww"); {
+        *cutflow << HFTname("delta_phi_x_scaled_ww");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return delta_phi_x_scaled_ww;
+        };
+        *cutflow << SaveVar();
+    }
+
+
+
+    *cutflow << NewVar("MT1_scaled_vec"); {
+        *cutflow << HFTname("MT_1_scaled_vec");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+
+            ////////////////pt 20
+            if(bjets.size()>=2) {
+                TLorentzVector bjet_system = (*bjets.at(0) + *bjets.at(1));
+                double m_bb = bjet_system.M();
+                double scaling = 125.09/m_bb;
+                bjet_system.SetPtEtaPhiE(bjet_system.Pt() * scaling, bjet_system.Eta(), bjet_system.Phi(), bjet_system.E() * scaling);
+                TLorentzVector vis = (*leptons.at(0) + *leptons.at(1) + bjet_system);
+
+                double pt_vis = vis.Pt();
+                double m_vis = vis.M();
+                double et_vis = sqrt(pt_vis * pt_vis + m_vis * m_vis);
+
+                out.push_back(( sqrt( (et_vis + met.lv().Pt()) * (et_vis + met.lv().Pt()) -
+                            ((vis + met.lv()).Pt() * (vis + met.lv()).Pt()) ) ));
+            }
+            else {
+                out.push_back(-10.);
+            }
+            ////////////////pt 30
+            if(bjets30.size()>=2) {
+                TLorentzVector bjet_system = (*bjets30.at(0) + *bjets30.at(1));
+                double m_bb = bjet_system.M();
+                double scaling = 125.09/m_bb;
+                bjet_system.SetPtEtaPhiE(bjet_system.Pt() * scaling, bjet_system.Eta(), bjet_system.Phi(), bjet_system.E() * scaling);
+                TLorentzVector vis = (*leptons.at(0) + *leptons.at(1) + bjet_system);
+
+                double pt_vis = vis.Pt();
+                double m_vis = vis.M();
+                double et_vis = sqrt(pt_vis * pt_vis + m_vis * m_vis);
+
+                out.push_back(( sqrt( (et_vis + met.lv().Pt()) * (et_vis + met.lv().Pt()) -
+                            ((vis + met.lv()).Pt() * (vis + met.lv()).Pt()) ) ));
+            }
+            else {
+                out.push_back(-10.);
+            }
+            ////////////////pt 40
+            if(bjets40.size()>=2) {
+                TLorentzVector bjet_system = (*bjets40.at(0) + *bjets40.at(1));
+                double m_bb = bjet_system.M();
+                double scaling = 125.09/m_bb;
+                bjet_system.SetPtEtaPhiE(bjet_system.Pt() * scaling, bjet_system.Eta(), bjet_system.Phi(), bjet_system.E() * scaling);
+                TLorentzVector vis = (*leptons.at(0) + *leptons.at(1) + bjet_system);
+
+                double pt_vis = vis.Pt();
+                double m_vis = vis.M();
+                double et_vis = sqrt(pt_vis * pt_vis + m_vis * m_vis);
+
+                out.push_back(( sqrt( (et_vis + met.lv().Pt()) * (et_vis + met.lv().Pt()) -
+                            ((vis + met.lv()).Pt() * (vis + met.lv()).Pt()) ) ));
+            }
+            else {
+                out.push_back(-10.);
+            }
+            ////////////////pt 50
+            if(bjets50.size()>=2) {
+                TLorentzVector bjet_system = (*bjets50.at(0) + *bjets50.at(1));
+                double m_bb = bjet_system.M();
+                double scaling = 125.09/m_bb;
+                bjet_system.SetPtEtaPhiE(bjet_system.Pt() * scaling, bjet_system.Eta(), bjet_system.Phi(), bjet_system.E() * scaling);
+                TLorentzVector vis = (*leptons.at(0) + *leptons.at(1) + bjet_system);
+
+                double pt_vis = vis.Pt();
+                double m_vis = vis.M();
+                double et_vis = sqrt(pt_vis * pt_vis + m_vis * m_vis);
+
+                out.push_back(( sqrt( (et_vis + met.lv().Pt()) * (et_vis + met.lv().Pt()) -
+                            ((vis + met.lv()).Pt() * (vis + met.lv()).Pt()) ) ));
+            }
+            else {
+                out.push_back(-10.);
+            }
+            ////////////////pt 60
+            if(bjets60.size()>=2) {
+                TLorentzVector bjet_system = (*bjets60.at(0) + *bjets60.at(1));
+                double m_bb = bjet_system.M();
+                double scaling = 125.09/m_bb;
+                bjet_system.SetPtEtaPhiE(bjet_system.Pt() * scaling, bjet_system.Eta(), bjet_system.Phi(), bjet_system.E() * scaling);
+                TLorentzVector vis = (*leptons.at(0) + *leptons.at(1) + bjet_system);
+
+                double pt_vis = vis.Pt();
+                double m_vis = vis.M();
+                double et_vis = sqrt(pt_vis * pt_vis + m_vis * m_vis);
+
+                out.push_back(( sqrt( (et_vis + met.lv().Pt()) * (et_vis + met.lv().Pt()) -
+                            ((vis + met.lv()).Pt() * (vis + met.lv()).Pt()) ) ));
+            }
+            else {
+                out.push_back(-10.);
+            }
+
+            return out;
         };
         *cutflow << SaveVar();
     }
@@ -1346,6 +2518,62 @@ int main(int argc, char* argv[])
         *cutflow << SaveVar();
     }
 
+    *cutflow << NewVar("mt2_llbb_vec"); {
+        *cutflow << HFTname("mt2_llbb_vec");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+
+            ///////// pt 20
+            if(bjets.size()>=2) {
+                const TLorentzVector v0 = ( *leptons.at(0) + *leptons.at(1) );
+                const TLorentzVector v1 = ( *bjets.at(0) + *bjets.at(1) );
+                out.push_back(kin::getMT2(v0, v1, met));
+            } 
+            else {
+                out.push_back(-10.0);
+            }
+            ///////// pt 30
+            if(bjets30.size()>=2) {
+                const TLorentzVector v0 = ( *leptons.at(0) + *leptons.at(1) );
+                const TLorentzVector v1 = ( *bjets30.at(0) + *bjets30.at(1) );
+                out.push_back(kin::getMT2(v0, v1, met));
+            } 
+            else {
+                out.push_back(-10.0);
+            }
+            ///////// pt 40
+            if(bjets40.size()>=2) {
+                const TLorentzVector v0 = ( *leptons.at(0) + *leptons.at(1) );
+                const TLorentzVector v1 = ( *bjets40.at(0) + *bjets40.at(1) );
+                out.push_back(kin::getMT2(v0, v1, met));
+            } 
+            else {
+                out.push_back(-10.0);
+            }
+            ///////// pt 50
+            if(bjets50.size()>=2) {
+                const TLorentzVector v0 = ( *leptons.at(0) + *leptons.at(1) );
+                const TLorentzVector v1 = ( *bjets50.at(0) + *bjets50.at(1) );
+                out.push_back(kin::getMT2(v0, v1, met));
+            } 
+            else {
+                out.push_back(-10.0);
+            }
+            ///////// pt 60
+            if(bjets60.size()>=2) {
+                const TLorentzVector v0 = ( *leptons.at(0) + *leptons.at(1) );
+                const TLorentzVector v1 = ( *bjets60.at(0) + *bjets60.at(1) );
+                out.push_back(kin::getMT2(v0, v1, met));
+            } 
+            else {
+                out.push_back(-10.0);
+            }
+
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+
 
     // mt2_bb
     *cutflow << NewVar("mt2_bb"); {
@@ -1361,6 +2589,63 @@ int main(int argc, char* argv[])
         };
         *cutflow << SaveVar();
     }
+
+    *cutflow << NewVar("mt2_bb_vec"); {
+        *cutflow << HFTname("mt2_bb_vec");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+
+            ////////////pt 20
+            if(bjets.size()>=2) {
+                const TLorentzVector b0 = (*bjets.at(0));
+                const TLorentzVector b1 = (*bjets.at(1));
+                out.push_back(kin::getMT2(b0,b1,met));
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            ////////////pt 30
+            if(bjets30.size()>=2) {
+                const TLorentzVector b0 = (*bjets30.at(0));
+                const TLorentzVector b1 = (*bjets30.at(1));
+                out.push_back(kin::getMT2(b0,b1,met));
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            ////////////pt 40
+            if(bjets40.size()>=2) {
+                const TLorentzVector b0 = (*bjets40.at(0));
+                const TLorentzVector b1 = (*bjets40.at(1));
+                out.push_back(kin::getMT2(b0,b1,met));
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            ////////////pt 50
+            if(bjets50.size()>=2) {
+                const TLorentzVector b0 = (*bjets50.at(0));
+                const TLorentzVector b1 = (*bjets50.at(1));
+                out.push_back(kin::getMT2(b0,b1,met));
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            ////////////pt 60
+            if(bjets60.size()>=2) {
+                const TLorentzVector b0 = (*bjets60.at(0));
+                const TLorentzVector b1 = (*bjets60.at(1));
+                out.push_back(kin::getMT2(b0,b1,met));
+            }
+            else {
+                out.push_back(-10.0);
+            }
+
+            return out;
+        };
+        *cutflow << SaveVar();
+    }
+
 
     // mt2_lvis
     *cutflow << NewVar("mt2_lvis"); {
@@ -1449,6 +2734,46 @@ int main(int argc, char* argv[])
                 return (bjets.at(0)->DeltaPhi(*bjets.at(1)));
             }
             return -10.;
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("dphi_bb_vec"); {
+        *cutflow << HFTname("dphi_bb_vec");
+        *cutflow << [&](Superlink* sl, var_float_array*) -> vector<double> {
+            vector<double> out;
+            if(bjets.size()>=2) {
+                out.push_back( (bjets.at(0)->DeltaPhi(*bjets.at(1))) );
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            if(bjets30.size()>=2) {
+                out.push_back( (bjets30.at(0)->DeltaPhi(*bjets30.at(1))) );
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            if(bjets40.size()>=2) {
+                out.push_back( (bjets40.at(0)->DeltaPhi(*bjets40.at(1))) );
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            if(bjets50.size()>=2) {
+                out.push_back( (bjets50.at(0)->DeltaPhi(*bjets50.at(1))) );
+            }
+            else {
+                out.push_back(-10.0);
+            }
+
+            if(bjets60.size()>=2) {
+                out.push_back( (bjets60.at(0)->DeltaPhi(*bjets60.at(1))) );
+            }
+            else {
+                out.push_back(-10.0);
+            }
+            return out;
         };
         *cutflow << SaveVar();
     }
@@ -1595,6 +2920,394 @@ int main(int argc, char* argv[])
         *cutflow << SaveVar();
     }
 
+    vector<float> event_shapes;
+    vector<float> event_shapes_b20;
+    vector<float> event_shapes_b30;
+    vector<float> event_shapes_b40;
+    vector<float> event_shapes_b50;
+    vector<float> event_shapes_b60;
+
+    *cutflow << [&](Superlink* sl, var_void*) {
+
+        vector<float> px;
+        vector<float> py;
+        vector<float> pz;
+
+        // px vector
+        for(auto x : leptons) px.push_back(x->Px());
+        for(auto x : jets) px.push_back(x->Px());
+        px.push_back(met.lv().Px());
+
+        // py vector
+        for(auto x : leptons) py.push_back(x->Py());
+        for(auto x : jets) py.push_back(x->Py());
+        py.push_back(met.lv().Py());
+
+        // px vector
+        for(auto x : leptons) pz.push_back(x->Pz());
+        for(auto x : jets) pz.push_back(x->Pz());
+
+        event_shapes = PhysicsTools::event_shapes(px, py, pz);
+    };
+
+    *cutflow << [&](Superlink* sl, var_void*) {
+        vector<float> px;
+        vector<float> py;
+        vector<float>pz;
+
+        // px vector
+        for(auto x : leptons) px.push_back(x->Px());
+        if(bjets.size()>=2) {
+            px.push_back(bjets.at(0)->Px());
+            px.push_back(bjets.at(1)->Px());
+        } 
+        px.push_back(met.lv().Px());
+
+        // py vector
+        for(auto x : leptons) py.push_back(x->Py());
+        if(bjets.size()>=2) {
+            py.push_back(bjets.at(0)->Py());
+            py.push_back(bjets.at(1)->Py());
+        }
+        py.push_back(met.lv().Py());
+
+        // pz vector
+        for(auto x : leptons) pz.push_back(x->Pz());
+        if(bjets.size()>=2) {
+            pz.push_back(bjets.at(0)->Pz());
+            pz.push_back(bjets.at(1)->Pz());
+        }
+
+        event_shapes_b20 = PhysicsTools::event_shapes(px, py, pz);
+    };
+
+    *cutflow << [&](Superlink* sl, var_void*) {
+        vector<float> px;
+        vector<float> py;
+        vector<float>pz;
+
+        // px vector
+        for(auto x : leptons) px.push_back(x->Px());
+        if(bjets30.size()>=2) {
+            px.push_back(bjets30.at(0)->Px());
+            px.push_back(bjets30.at(1)->Px());
+        } 
+        px.push_back(met.lv().Px());
+
+        // py vector
+        for(auto x : leptons) py.push_back(x->Py());
+        if(bjets30.size()>=2) {
+            py.push_back(bjets30.at(0)->Py());
+            py.push_back(bjets30.at(1)->Py());
+        }
+        py.push_back(met.lv().Py());
+
+        // pz vector
+        for(auto x : leptons) pz.push_back(x->Pz());
+        if(bjets30.size()>=2) {
+            pz.push_back(bjets30.at(0)->Pz());
+            pz.push_back(bjets30.at(1)->Pz());
+        }
+
+        event_shapes_b30 = PhysicsTools::event_shapes(px, py, pz);
+    };
+
+    *cutflow << [&](Superlink* sl, var_void*) {
+        vector<float> px;
+        vector<float> py;
+        vector<float>pz;
+
+        // px vector
+        for(auto x : leptons) px.push_back(x->Px());
+        if(bjets40.size()>=2) {
+            px.push_back(bjets40.at(0)->Px());
+            px.push_back(bjets40.at(1)->Px());
+        } 
+        px.push_back(met.lv().Px());
+
+        // py vector
+        for(auto x : leptons) py.push_back(x->Py());
+        if(bjets40.size()>=2) {
+            py.push_back(bjets40.at(0)->Py());
+            py.push_back(bjets40.at(1)->Py());
+        }
+        py.push_back(met.lv().Py());
+
+        // pz vector
+        for(auto x : leptons) pz.push_back(x->Pz());
+        if(bjets40.size()>=2) {
+            pz.push_back(bjets40.at(0)->Pz());
+            pz.push_back(bjets40.at(1)->Pz());
+        }
+
+        event_shapes_b40 = PhysicsTools::event_shapes(px, py, pz);
+    };
+
+    *cutflow << [&](Superlink* sl, var_void*) {
+        vector<float> px;
+        vector<float> py;
+        vector<float>pz;
+
+        // px vector
+        for(auto x : leptons) px.push_back(x->Px());
+        if(bjets50.size()>=2) {
+            px.push_back(bjets50.at(0)->Px());
+            px.push_back(bjets50.at(1)->Px());
+        } 
+        px.push_back(met.lv().Px());
+
+        // py vector
+        for(auto x : leptons) py.push_back(x->Py());
+        if(bjets50.size()>=2) {
+            py.push_back(bjets50.at(0)->Py());
+            py.push_back(bjets50.at(1)->Py());
+        }
+        py.push_back(met.lv().Py());
+
+        // pz vector
+        for(auto x : leptons) pz.push_back(x->Pz());
+        if(bjets50.size()>=2) {
+            pz.push_back(bjets50.at(0)->Pz());
+            pz.push_back(bjets50.at(1)->Pz());
+        }
+
+        event_shapes_b50 = PhysicsTools::event_shapes(px, py, pz);
+    };
+
+    *cutflow << [&](Superlink* sl, var_void*) {
+        vector<float> px;
+        vector<float> py;
+        vector<float>pz;
+
+        // px vector
+        for(auto x : leptons) px.push_back(x->Px());
+        if(bjets60.size()>=2) {
+            px.push_back(bjets60.at(0)->Px());
+            px.push_back(bjets60.at(1)->Px());
+        } 
+        px.push_back(met.lv().Px());
+
+        // py vector
+        for(auto x : leptons) py.push_back(x->Py());
+        if(bjets60.size()>=2) {
+            py.push_back(bjets60.at(0)->Py());
+            py.push_back(bjets60.at(1)->Py());
+        }
+        py.push_back(met.lv().Py());
+
+        // pz vector
+        for(auto x : leptons) pz.push_back(x->Pz());
+        if(bjets60.size()>=2) {
+            pz.push_back(bjets60.at(0)->Pz());
+            pz.push_back(bjets60.at(1)->Pz());
+        }
+
+        event_shapes_b60 = PhysicsTools::event_shapes(px, py, pz);
+    };
+
+    *cutflow << NewVar("sphericity"); {
+        *cutflow << HFTname("sphericity");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes.at(0);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("transverse_sphericity"); {
+        *cutflow << HFTname("transverse_sphericity");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes.at(1);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("aplanarity"); {
+        *cutflow << HFTname("aplanarity");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes.at(2);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("mod_aplanarity"); {
+        *cutflow << HFTname("mod_aplanarity");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return exp( -8. * event_shapes.at(2) ); 
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("sphericity_b20"); {
+        *cutflow << HFTname("sphericity_b20");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes_b20.at(0);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("transverse_sphericity_b20"); {
+        *cutflow << HFTname("transverse_sphericity_b20");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes_b20.at(1);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("aplanarity_b20"); {
+        *cutflow << HFTname("aplanarity_b20");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes_b20.at(2);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("mod_aplanarity_b20"); {
+        *cutflow << HFTname("mod_aplanarity_b20");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return exp( -8. * event_shapes_b20.at(2) ); 
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("sphericity_b30"); {
+        *cutflow << HFTname("sphericity_b30");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes_b30.at(0);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("transverse_sphericity_b30"); {
+        *cutflow << HFTname("transverse_sphericity_b30");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes_b30.at(1);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("aplanarity_b30"); {
+        *cutflow << HFTname("aplanarity_b30");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes_b30.at(2);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("mod_aplanarity_b30"); {
+        *cutflow << HFTname("mod_aplanarity_b30");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return exp( -8. * event_shapes_b30.at(2) ); 
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("sphericity_b40"); {
+        *cutflow << HFTname("sphericity_b40");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes_b40.at(0);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("transverse_sphericity_b40"); {
+        *cutflow << HFTname("transverse_sphericity_b40");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes_b40.at(1);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("aplanarity_b40"); {
+        *cutflow << HFTname("aplanarity_b40");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes_b40.at(2);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("mod_aplanarity_b40"); {
+        *cutflow << HFTname("mod_aplanarity_b40");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return exp( -8. * event_shapes_b40.at(2) ); 
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("sphericity_b50"); {
+        *cutflow << HFTname("sphericity_b50");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes_b50.at(0);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("transverse_sphericity_b50"); {
+        *cutflow << HFTname("transverse_sphericity_b50");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes_b50.at(1);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("aplanarity_b50"); {
+        *cutflow << HFTname("aplanarity_b50");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes_b50.at(2);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("mod_aplanarity_b50"); {
+        *cutflow << HFTname("mod_aplanarity_b50");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return exp( -8. * event_shapes_b50.at(2) ); 
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("sphericity_b60"); {
+        *cutflow << HFTname("sphericity_b60");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes_b60.at(0);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("transverse_sphericity_b60"); {
+        *cutflow << HFTname("transverse_sphericity_b60");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes_b60.at(1);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("aplanarity_b60"); {
+        *cutflow << HFTname("aplanarity_b60");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return event_shapes_b60.at(2);
+        };
+        *cutflow << SaveVar();
+    }
+
+    *cutflow << NewVar("mod_aplanarity_b60"); {
+        *cutflow << HFTname("mod_aplanarity_b60");
+        *cutflow << [&](Superlink* sl, var_float*) -> double {
+            return exp( -8. * event_shapes_b60.at(2) ); 
+        };
+        *cutflow << SaveVar();
+    }
+
+
+
+
+    *cutflow << [&](Superlink* sl, var_void*) { event_shapes.clear(); };
+    *cutflow << [&](Superlink* sl, var_void*) { event_shapes_b20.clear(); };
+    *cutflow << [&](Superlink* sl, var_void*) { event_shapes_b30.clear(); };
+    *cutflow << [&](Superlink* sl, var_void*) { event_shapes_b40.clear(); };
+    *cutflow << [&](Superlink* sl, var_void*) { event_shapes_b50.clear(); };
+    *cutflow << [&](Superlink* sl, var_void*) { event_shapes_b60.clear(); };
+
+    *cutflow << [&](Superlink* sl, var_void*) { delta_phi_x = -10.; delta_phi_x_scaled = -10.; delta_phi_x_scaled_ww = -10.; };
 
 
     // clear the wectors
@@ -1603,7 +3316,15 @@ int main(int argc, char* argv[])
     *cutflow << [&](Superlink* sl, var_void*) { muons.clear(); };
     *cutflow << [&](Superlink* sl, var_void*) { jets.clear(); };
     *cutflow << [&](Superlink* sl, var_void*) { bjets.clear(); };
+    *cutflow << [&](Superlink* sl, var_void*) { bjets30.clear(); };
+    *cutflow << [&](Superlink* sl, var_void*) { bjets40.clear(); };
+    *cutflow << [&](Superlink* sl, var_void*) { bjets50.clear(); };
+    *cutflow << [&](Superlink* sl, var_void*) { bjets60.clear(); };
     *cutflow << [&](Superlink* sl, var_void*) { sjets.clear(); };
+    *cutflow << [&](Superlink* sl, var_void*) { sjets30.clear(); };
+    *cutflow << [&](Superlink* sl, var_void*) { sjets40.clear(); };
+    *cutflow << [&](Superlink* sl, var_void*) { sjets50.clear(); };
+    *cutflow << [&](Superlink* sl, var_void*) { sjets60.clear(); };
     *cutflow << [&](Superlink* sl, var_void*) { met.clear(); };
 
 
