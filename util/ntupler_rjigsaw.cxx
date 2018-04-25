@@ -18,3 +18,24 @@
 // Superflow
 #include "Superflow/Superflow.h"
 #include "Superflow/Superlink.h"
+#include "Superflow/Cut.h"
+#include "Superflow/StringTools.h"
+#include "Superflow/input_options.h"
+
+using namespace std;
+using namespace sflow;
+
+const string analysis_name = "ntupler_jigsaw";
+
+int main(int argc, char* argv[])
+{
+
+    SFOptions options(argc, argv);
+    options.ana_name = analysis_name;
+    if(!read_options(options)) {
+        exit(1);
+    }
+
+
+    return 0;
+} // main
